@@ -12,8 +12,8 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'No text provided' }, { status: 400 });
         }
 
-        // Fallback to the most stable model if flash fails
-        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+        // Using the user's available model
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
         const prompt = `
       Você é um professor especialista e podcaster carismático.
