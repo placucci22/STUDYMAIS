@@ -1,10 +1,11 @@
 @import "tailwindcss";
 
 :root {
-  /* Base Colors */
-  --background: #0F0F1A;
+  /* Base Colors - Lighter Dark Mode */
+  --background: #18181B;
+  /* Was #0F0F1A */
   --foreground: #F5F3FF;
-  
+
   /* Neural Violet Palette */
   --neural-50: #F5F3FF;
   --neural-100: #EDE9FE;
@@ -20,15 +21,17 @@
   /* Synapse Blue */
   --synapse-500: #3B82F6;
 
-  /* Void (Dark Backgrounds) */
-  --void-900: #0F0F1A;
-  --void-800: #181825;
+  /* Void (Dark Backgrounds) - Lighter Panels */
+  --void-900: #18181B;
+  /* Matches background for seamless look */
+  --void-800: #27272A;
+  /* Lighter panels (Zinc-800ish) */
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  
+
   --color-neural-50: var(--neural-50);
   --color-neural-100: var(--neural-100);
   --color-neural-200: var(--neural-200);
@@ -49,8 +52,15 @@
   --animate-float: float 6s ease-in-out infinite;
 
   @keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
+
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+
+    50% {
+      transform: translateY(-10px);
+    }
   }
 }
 

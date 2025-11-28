@@ -5,7 +5,7 @@ import { useApp } from "@/context/AppContext";
 import { Card, Button, ProgressBar } from "@/components/ui";
 import { Play, Pause, SkipBack, SkipForward, FastForward, Loader2, AlertCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function PlayerPage() {
@@ -16,6 +16,58 @@ export default function PlayerPage() {
 
     const { library } = useApp();
     const router = useRouter();
+
+    const [showLyrics, setShowLyrics] = useState(false);
+
+    // Mock lyrics synchronization (since we don't have real timestamps yet)
+    // We split the raw text by sentences/newlines and estimate time based on length
+    const [lyrics, setLyrics] = useState<{ text: string, startTime: number }[]>([]);
+    const [currentLineIndex, setCurrentLineIndex] = useState(0);
+
+    useEffect(() => {
+        if (currentModule?.raw_text) {
+            // Simple heuristic: 15 chars per second roughly
+            const lines = currentModule.raw_text.split(/(?<=[.!?])\s+/).filter(l => l.length > 0);
+            let accumulatedTime = 0;
+            const parsedLyrics = lines.map(line => {
+                const duration = Math.max(2, line.length * 0.06); // Estimate duration
+                const item = { text: line, startTime: accumulatedTime };
+                accumulatedTime += duration;
+                return item;
+            });
+            setLyrics(parsedLyrics);
+        }
+    }, [currentModule]);
+
+    useEffect(() => {
+        if (lyrics.length > 0) {
+            // Find current line based on currentTime
+            // In a real implementation, we'd use exact timestamps from TTS
+            // Here we map currentTime (0-100%) to the estimated total duration of text
+            // But wait, we have real `duration` from the player.
+            // Let's assume the estimated text duration matches the audio duration for this mock.
+
+            const totalEstimated = lyrics[lyrics.length - 1].startTime + 5; // + buffer
+            const relativeTime = (currentTime / (duration || 1)) * totalEstimated;
+
+            const index = lyrics.findIndex((l, i) => {
+                const next = lyrics[i + 1];
+                return relativeTime >= l.startTime && (!next || relativeTime < next.startTime);
+            });
+
+            if (index !== -1) setCurrentLineIndex(index);
+        }
+    }, [currentTime, duration, lyrics]);
+
+    // Auto-scroll to active line
+    useEffect(() => {
+        if (showLyrics) {
+            const activeEl = document.getElementById(`lyric-${currentLineIndex}`);
+            if (activeEl) {
+                activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+    }, [currentLineIndex, showLyrics]);
 
     // Auto-play latest item (new or in-progress)
     useEffect(() => {
@@ -100,7 +152,45 @@ export default function PlayerPage() {
     }
 
     return (
-        <div className="flex flex-col h-[calc(100vh-80px)] p-6 pt-12 max-w-md mx-auto w-full">
+        <div className="flex flex-col h-[calc(100vh-80px)] p-6 pt-12 max-w-md mx-auto w-full relative">
+
+            {/* LYRICS OVERLAY */}
+            <AnimatePresence>
+                {showLyrics && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 50 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 50 }}
+                        className="absolute inset-0 z-20 bg-void-900/95 backdrop-blur-xl rounded-3xl flex flex-col p-6 overflow-hidden"
+                    >
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xs font-bold text-neural-400 uppercase tracking-widest">Transcrição Neural</h3>
+                            <Button variant="ghost" size="sm" onClick={() => setShowLyrics(false)}>
+                                <span className="sr-only">Fechar</span>
+                                &times;
+                            </Button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto space-y-6 no-scrollbar mask-linear-fade">
+                            {lyrics.map((line, i) => (
+                                <motion.p
+                                    key={i}
+                                    id={`lyric-${i}`}
+                                    animate={{
+                                        opacity: i === currentLineIndex ? 1 : 0.3,
+                                        scale: i === currentLineIndex ? 1.05 : 1,
+                                        filter: i === currentLineIndex ? 'blur(0px)' : 'blur(1px)'
+                                    }}
+                                    className={`text-lg font-medium transition-all duration-500 ${i === currentLineIndex ? 'text-white' : 'text-neural-400'}`}
+                                >
+                                    {line.text}
+                                </motion.p>
+                            ))}
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* Visualizer / Cover */}
             <div className="flex-1 flex flex-col items-center justify-center relative min-h-[300px]">
                 <div className="absolute inset-0 bg-gradient-to-b from-neural-500/5 to-transparent blur-3xl rounded-full pointer-events-none" />
@@ -150,7 +240,15 @@ export default function PlayerPage() {
                 >
                     {currentModule?.title || "Carregando..."}
                 </motion.h1>
-                <p className="text-neural-400 text-sm font-medium tracking-wide uppercase">Módulo de Aprendizagem</p>
+                <div className="flex items-center justify-center gap-2">
+                    <p className="text-neural-400 text-sm font-medium tracking-wide uppercase">Módulo de Aprendizagem</p>
+                    <button
+                        onClick={() => setShowLyrics(!showLyrics)}
+                        className="bg-neural-800/50 hover:bg-neural-700 text-xs px-2 py-0.5 rounded text-neural-300 transition-colors border border-neural-700"
+                    >
+                        Lyrics
+                    </button>
+                </div>
             </div>
 
             {/* Controls */}
