@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { TextToSpeechClient } from '@google-cloud/text-to-speech';
+import { supabase } from '@/lib/supabase';
 
 export async function POST(req: NextRequest) {
     try {
@@ -36,11 +37,28 @@ export async function POST(req: NextRequest) {
             throw new Error("No audio content received");
         }
 
-        const audioBase64 = Buffer.from(response.audioContent).toString('base64');
-        const audioUrl = `data:audio/mp3;base64,${audioBase64}`;
+        const audioBuffer = Buffer.from(response.audioContent);
+
+        // Upload to Supabase
+        const fileName = `audio_${Date.now()}_${Math.random().toString(36).substring(7)}.mp3`;
+        const { error: uploadError } = await supabase.storage
+            .from('uploads')
+            .upload(fileName, audioBuffer, {
+                contentType: 'audio/mpeg',
+                upsert: false
+            });
+
+        if (uploadError) {
+            console.error("Supabase Upload Error:", uploadError);
+            throw new Error("Failed to upload audio to storage");
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+            .from('uploads')
+            .getPublicUrl(fileName);
 
         return NextResponse.json({
-            audioUrl,
+            audioUrl: publicUrl,
             duration: text.length * 0.08
         });
 
