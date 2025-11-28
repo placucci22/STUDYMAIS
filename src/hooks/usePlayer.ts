@@ -91,7 +91,7 @@ export function usePlayer() {
                 // Let's use a short sample data URI or a real sample URL if available.
                 // For this demo, we'll use a silent or beep base64 if needed, or just trust the browser handles the error gracefully?
                 // Better: Use a reliable sample URL.
-                audioRef.current.src = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"; // Public sample
+                audioRef.current.src = data.url;
                 audioRef.current.load();
             }
 
