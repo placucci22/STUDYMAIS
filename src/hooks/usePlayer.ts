@@ -65,7 +65,7 @@ export function usePlayer() {
                 module_context: "Web Context"
             });
 
-            if (scriptResult.error) throw new Error(scriptResult.message);
+
 
             setStatus('generating_audio');
 
@@ -75,7 +75,7 @@ export function usePlayer() {
                 voice_id: 'eleven_monolingual_v1'
             });
 
-            if (audioResult.error) throw new Error(audioResult.message);
+
 
             // 3. Setup Player
             const data = {

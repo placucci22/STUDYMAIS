@@ -58,9 +58,7 @@ export function useUpload() {
             // Call Backend
             const result = await analyze_pdf(file);
 
-            if (result.error) {
-                throw new Error(result.message);
-            }
+
 
             // Success
             const newMaterial = {
