@@ -64,6 +64,8 @@ export function useUpload() {
                 .from('uploads')
                 .getPublicUrl(fileName);
 
+            console.log("Supabase Public URL:", publicUrl);
+
             setStatus('processing');
 
             // 3. Call Backend with URL
@@ -87,6 +89,7 @@ export function useUpload() {
             setStatus('success');
 
         } catch (err: any) {
+            console.error("Ingestion Error Details:", err);
             setStatus('error');
             setError(err.message || "Não consegui processar este arquivo.");
             track_event('ingest_fail', { error: err.message });
