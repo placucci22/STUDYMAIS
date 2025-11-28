@@ -86,42 +86,51 @@ export default function Home() {
               <span className="text-xs text-neural-400 bg-neural-800 px-2 py-1 rounded-full">Ativo</span>
             </div>
 
-            <Link href="/player">
-              <Card className="group hover:border-neural-500/50 transition-all cursor-pointer relative overflow-hidden bg-gradient-to-br from-neural-900/80 to-void-900/80 border-neural-700/50">
-                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                  <Play className="w-24 h-24 text-neural-500" />
-                </div>
+            {(() => {
+              // Find next lesson
+              const nextLesson = studyPlan.lessons.find(l => l.status !== 'completed') || studyPlan.lessons[studyPlan.lessons.length - 1];
 
-                <div className="p-6 space-y-4 relative z-10">
-                  <div className="space-y-1">
-                    <span className="text-xs font-medium text-neural-300 flex items-center gap-1">
-                      <Sparkles className="w-3 h-3" /> Próxima Sessão
-                    </span>
-                    <h3 className="text-xl font-bold text-white line-clamp-2">
-                      {inProgress[0]?.title || "Continuar Jornada"}
-                    </h3>
-                  </div>
-
-                  {inProgress[0] ? (
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-xs text-neural-400">
-                        <span>Progresso do Módulo</span>
-                        <span>{inProgress[0].progress}%</span>
-                      </div>
-                      <ProgressBar progress={inProgress[0].progress} className="h-2" />
+              return (
+                <Link href="/player">
+                  <Card className="group hover:border-neural-500/50 transition-all cursor-pointer relative overflow-hidden bg-gradient-to-br from-neural-900/80 to-void-900/80 border-neural-700/50">
+                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                      <Play className="w-24 h-24 text-neural-500" />
                     </div>
-                  ) : (
-                    <p className="text-sm text-neural-400">
-                      Seu plano está pronto. Vamos começar?
-                    </p>
-                  )}
 
-                  <Button className="w-full mt-2">
-                    {inProgress.length > 0 ? "Retomar Estudo" : "Iniciar Sessão"}
-                  </Button>
-                </div>
-              </Card>
-            </Link>
+                    <div className="p-6 space-y-4 relative z-10">
+                      <div className="space-y-1">
+                        <span className="text-xs font-medium text-neural-300 flex items-center gap-1">
+                          <Sparkles className="w-3 h-3" /> Próxima Sessão
+                        </span>
+                        <h3 className="text-xl font-bold text-white line-clamp-2">
+                          {nextLesson?.title || "Continuar Jornada"}
+                        </h3>
+                        <p className="text-sm text-neural-400 line-clamp-1">
+                          {nextLesson?.description}
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-xs text-neural-400">
+                          <span>Progresso do Plano</span>
+                          <span>
+                            {Math.round((studyPlan.lessons.filter(l => l.status === 'completed').length / studyPlan.lessons.length) * 100)}%
+                          </span>
+                        </div>
+                        <ProgressBar
+                          progress={(studyPlan.lessons.filter(l => l.status === 'completed').length / studyPlan.lessons.length) * 100}
+                          className="h-2"
+                        />
+                      </div>
+
+                      <Button className="w-full mt-2">
+                        {nextLesson?.status === 'in_progress' ? "Retomar Aula" : "Iniciar Aula"}
+                      </Button>
+                    </div>
+                  </Card>
+                </Link>
+              );
+            })()}
           </section>
 
           {/* Recent Modules List */}

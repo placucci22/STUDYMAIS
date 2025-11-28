@@ -17,11 +17,47 @@ export interface Material {
     raw_text?: string;
 }
 
+export type StudyMaterial = {
+    id: string;
+    subject: string;
+    type: 'pdf' | 'image' | 'link' | 'text';
+    source: 'upload' | 'manual';
+    title?: string;
+    url?: string;
+    notes?: string;
+};
+
+export type StudyPlanDraft = {
+    goal: string;
+    subjects: string[];
+    materials: StudyMaterial[];
+};
+
+export type Lesson = {
+    id: string;
+    subject: string;
+    title: string;
+    description?: string;
+    audioUrl?: string;
+    quizId?: string;
+    order: number;
+    status: 'locked' | 'unlocked' | 'in_progress' | 'completed';
+};
+
+export type StudyPlan = {
+    id: string;
+    goal: string;
+    subjects: string[];
+    lessons: Lesson[];
+    active: boolean;
+    title?: string;
+};
+
 interface AppContextType {
     userPlan: PlanType;
     setUserPlan: (plan: PlanType) => void;
-    studyPlan: { active: boolean; title?: string } | null;
-    setStudyPlan: (plan: { active: boolean; title?: string } | null) => void;
+    studyPlan: StudyPlan | null;
+    setStudyPlan: (plan: StudyPlan | null) => void;
     library: Material[];
     addToLibrary: (material: Material) => void;
     updateProgress: (id: number, progress: number) => void;
@@ -61,7 +97,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const [library, setLibrary] = useState<Material[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    const [studyPlan, setStudyPlan] = useState<{ active: boolean; title?: string } | null>(null);
+    const [studyPlan, setStudyPlan] = useState<StudyPlan | null>(null);
 
     // Load Initial Data
     useEffect(() => {
