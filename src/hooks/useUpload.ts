@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { analyze_pdf, track_event } from '@/lib/backend/actions';
 import { useApp } from '@/context/AppContext';
+import { supabase } from '@/lib/supabase';
 
 export function useUpload() {
     const [status, setStatus] = useState<'idle' | 'dragging' | 'validating' | 'uploading' | 'processing' | 'success' | 'error'>('idle');
@@ -29,10 +30,10 @@ export function useUpload() {
         if (!file) return;
 
         // Validation
-        // Vercel Serverless Limit is ~4.5MB. We set 4MB to be safe.
-        if (file.size > 4 * 1024 * 1024) {
+        // Supabase Free Tier is generous (50MB+), but let's keep it reasonable.
+        if (file.size > 50 * 1024 * 1024) {
             setStatus('error');
-            setError("O arquivo é muito grande para o plano gratuito (Lim: 4MB). Tente um PDF menor.");
+            setError("Arquivo muito grande. O limite é 50MB.");
             track_event('ingest_fail', { error: "Size Limit", file: file.name });
             return;
         }
@@ -48,23 +49,30 @@ export function useUpload() {
             setStatus('uploading');
             setError(null);
 
-            // Simulate Upload Progress
-            for (let i = 0; i <= 100; i += 10) {
-                setProgress(i);
-                await new Promise(r => setTimeout(r, 200));
+            // 1. Upload to Supabase Storage
+            const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+            const { data, error: uploadError } = await supabase.storage
+                .from('uploads')
+                .upload(fileName, file);
+
+            if (uploadError) {
+                throw new Error(`Upload falhou: ${uploadError.message}`);
             }
+
+            // 2. Get Public URL
+            const { data: { publicUrl } } = supabase.storage
+                .from('uploads')
+                .getPublicUrl(fileName);
 
             setStatus('processing');
 
-            // Call Backend
-            const result = await analyze_pdf(file);
-
-
+            // 3. Call Backend with URL
+            const result = await analyze_pdf(publicUrl, file.name.replace('.pdf', ''));
 
             // Success
             const newMaterial = {
                 id: Date.now(),
-                title: result.title || file.name.replace('.pdf', ''),
+                title: result.title,
                 cover_color: "#8B5CF6", // Default Neural Violet
                 progress: 0,
                 status: 'new' as const,
@@ -80,7 +88,7 @@ export function useUpload() {
 
         } catch (err: any) {
             setStatus('error');
-            setError(err.message || "Não consegui ler este PDF. Tente uma versão com texto selecionável.");
+            setError(err.message || "Não consegui processar este arquivo.");
             track_event('ingest_fail', { error: err.message });
         }
     };

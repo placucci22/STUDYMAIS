@@ -1,14 +1,13 @@
+
 import { Material } from "@/context/AppContext";
 
 // --- REAL BACKEND ACTIONS (Next.js API Routes) ---
 
-export async function analyze_pdf(file: File): Promise<{ title: string; chapters: string[]; raw_text: string }> {
-    const formData = new FormData();
-    formData.append('file', file);
-
+export async function analyze_pdf(fileUrl: string, title: string): Promise<{ title: string; chapters: string[]; raw_text: string }> {
     const response = await fetch('/api/upload', {
         method: 'POST',
-        body: formData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileUrl }),
     });
 
     if (!response.ok) {
@@ -18,11 +17,8 @@ export async function analyze_pdf(file: File): Promise<{ title: string; chapters
 
     const data = await response.json();
 
-    // Simple heuristic for title (first line or filename)
-    const title = data.text.split('\n')[0].substring(0, 50) || file.name.replace('.pdf', '');
-
     return {
-        title: title,
+        title: title || data.text.split('\n')[0].substring(0, 50),
         chapters: ["Conteúdo Completo"], // We are processing the whole text for now
         raw_text: data.text
     };
@@ -102,6 +98,6 @@ export async function ask_doubt(params: { context: string; question: string }): 
 
 export function track_event(event_name: string, properties: any = {}) {
     if (typeof window !== 'undefined') {
-        console.log(`[TRACKING] ${event_name}`, properties);
+        console.log(`[TRACKING] ${event_name} `, properties);
     }
 }
