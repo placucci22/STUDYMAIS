@@ -427,7 +427,7 @@ function SubjectMaterialBlock({ subject, onAddMaterial, materials, onRemoveMater
                                 className="absolute inset-0 opacity-0 cursor-pointer"
                                 disabled={isUploading}
                             />
-                            <Button size="sm" variant="outline" className="w-full" disabled={isUploading}>
+                            <Button size="sm" variant="secondary" className="w-full" disabled={isUploading}>
                                 {isUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <FileUp className="w-3 h-3 mr-2" />}
                                 PDF
                             </Button>
@@ -435,7 +435,7 @@ function SubjectMaterialBlock({ subject, onAddMaterial, materials, onRemoveMater
 
                         <Button
                             size="sm"
-                            variant="outline"
+                            variant="secondary"
                             onClick={() => setShowLinkInput(!showLinkInput)}
                         >
                             <LinkIcon className="w-3 h-3 mr-2" /> Link

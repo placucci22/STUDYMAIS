@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { TextToSpeechClient } from '@google-cloud/text-to-speech';
 import { supabase } from '@/lib/supabase';
+
+export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
     try {
@@ -11,7 +12,6 @@ export async function POST(req: NextRequest) {
         }
 
         // Initialize client with credentials from Environment Variable (JSON string)
-        // This is required for Vercel/Serverless environments where we can't easily have a key file.
         let credentials;
         if (process.env.GOOGLE_CREDENTIALS_JSON) {
             try {
@@ -22,7 +22,8 @@ export async function POST(req: NextRequest) {
             }
         }
 
-        // If no env var, it will try to look for the file (fallback for local dev if configured that way)
+        // Dynamically import to avoid build-time evaluation issues
+        const { TextToSpeechClient } = await import('@google-cloud/text-to-speech');
         const client = new TextToSpeechClient({ credentials });
 
         const request = {
