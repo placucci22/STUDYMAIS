@@ -1,173 +1,107 @@
-/**
- * Backend Actions (Web Mock)
- * Simula a lógica de IA e processamento no navegador.
- */
+import { Material } from "@/context/AppContext";
 
-import { track_event } from './tracking';
+// --- REAL BACKEND ACTIONS (Next.js API Routes) ---
 
-// --- TYPES ---
-interface AnalyzeResult {
-    title: string;
-    complexity: string;
-    chapters: string[];
-    estimated_time: string;
-    error?: string;
-    message?: string;
-}
+export async function analyze_pdf(file: File): Promise<{ title: string; chapters: string[]; raw_text: string }> {
+    const formData = new FormData();
+    formData.append('file', file);
 
-interface ScriptResult {
-    script_text: string;
-    length: number;
-    error?: string;
-    message?: string;
-}
-
-interface AudioResult {
-    audio_url: string;
-    duration: number;
-    error?: string;
-    message?: string;
-}
-
-interface QuizResult {
-    questions: any[];
-    error?: string;
-    message?: string;
-}
-
-interface DoubtResult {
-    answer: string;
-    sources: string[];
-    error?: string;
-    message?: string;
-}
-
-// --- 1. ANALYZE PDF ---
-
-export async function analyze_pdf(file: File): Promise<AnalyzeResult> {
-    const ACTION = 'analyze_pdf';
-    await track_event('ingest_start', { file: file.name, size: file.size });
-
-    console.log(`[BACKEND] Analyzing ${file.name}...`);
-
-    // Simula latência de upload e processamento (Gemini Flash)
-    await new Promise(r => setTimeout(r, 2000));
-
-    // Mock de Erro: Arquivo "corrompido.pdf"
-    if (file.name.includes('corrompido')) {
-        const error = "Não consegui ler este PDF. Tente uma versão com texto selecionável.";
-        await track_event('ingest_fail', { error, file: file.name });
-        return { title: '', complexity: '', chapters: [], estimated_time: '', error, message: error };
-    }
-
-    // Sucesso Mockado
-    const result: AnalyzeResult = {
-        title: file.name.replace('.pdf', ''), // Simplificação
-        complexity: "Intermediário",
-        chapters: ["Introdução", "Conceitos Chave", "Aplicação Prática", "Conclusão"],
-        estimated_time: "15 min"
-    };
-
-    await track_event('ingest_success', {
-        title: result.title,
-        complexity: result.complexity,
-        chapters_count: result.chapters.length
+    const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
     });
 
-    return result;
-}
+    if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || 'Failed to analyze PDF');
+    }
 
-// --- 2. GENERATE SCRIPT ---
+    const data = await response.json();
 
-export async function generate_script({ module_title, module_context }: { module_title: string, module_context: string }): Promise<ScriptResult> {
-    const ACTION = 'generate_script';
-    console.log(`[INFO] [${ACTION}] Gerando roteiro para: ${module_title} `);
+    // Simple heuristic for title (first line or filename)
+    const title = data.text.split('\n')[0].substring(0, 50) || file.name.replace('.pdf', '');
 
-    // Simula latência de LLM (Gemini Pro)
-    await new Promise(r => setTimeout(r, 3000));
-
-    const script_text = `
-    [Host]: Olá! Bem-vindo ao Cognitive OS. Hoje vamos desvendar ${module_title}.
-    [Host]: ${module_context || "O conceito chave aqui é entender como a informação se estrutura."}
-    [Host]: Imagine que sua mente é como uma biblioteca...
-  `.trim();
-
-    const result: ScriptResult = {
-        script_text,
-        length: script_text.length
+    return {
+        title: title,
+        chapters: ["Conteúdo Completo"], // We are processing the whole text for now
+        raw_text: data.text
     };
-
-    console.log(`[INFO] [${ACTION}] Roteiro gerado.`, JSON.stringify(result));
-    return result;
 }
 
-// --- 3. GENERATE AUDIO ---
+export async function generate_script(params: { module_title: string; module_context: string; raw_text?: string }): Promise<{ script_text: string }> {
+    // If we don't have raw_text passed, we can't generate. 
+    if (!params.raw_text) {
+        return { script_text: "Este é um conteúdo de demonstração. O texto original não está disponível para geração via IA." };
+    }
 
-export async function generate_audio({ script_text, voice_id }: { script_text: string, voice_id: string }): Promise<AudioResult> {
-    const ACTION = 'generate_audio';
-    console.log(`[INFO] [${ACTION}] Iniciando síntese de voz...`, JSON.stringify({ voice_id }));
+    const response = await fetch('/api/generate/script', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            text: params.raw_text,
+            module_title: params.module_title
+        }),
+    });
 
-    // Simula latência de TTS (ElevenLabs)
-    await new Promise(r => setTimeout(r, 4000));
+    if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || 'Failed to generate script');
+    }
 
-    // Mock de URL de áudio (Placeholder)
-    // Em produção, isso viria do bucket S3/Supabase Storage
-    const audio_url = `https://cdn.cognitive-os.app/audios/${Date.now()}.mp3`;
+    const data = await response.json();
+    return { script_text: data.script };
+}
 
-    const result: AudioResult = {
-        audio_url,
-        duration: 120 // 2 minutos fixos para mock
+export async function generate_audio(params: { script_text: string; voice_id?: string }): Promise<{ audio_url: string; duration: number }> {
+    const response = await fetch('/api/generate/audio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: params.script_text }),
+    });
+
+    if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || 'Failed to generate audio');
+    }
+
+    const data = await response.json();
+    return {
+        audio_url: data.audioUrl,
+        duration: 0 // Duration will be calculated by the player when metadata loads
     };
-
-    console.log(`[INFO] [${ACTION}] Áudio gerado com sucesso.`, JSON.stringify(result));
-    return result;
 }
 
-// --- 4. GENERATE QUIZ ---
-
-export async function generate_quiz({ script_text }: { script_text: string }): Promise<QuizResult> {
-    const ACTION = 'generate_quiz';
-    console.log(`[INFO] [${ACTION}] Criando desafio cognitivo... `);
-
+export async function generate_quiz(params: { script_text: string }): Promise<{ questions: any[] }> {
+    // Mocked Quiz for now to save complexity/tokens
     await new Promise(r => setTimeout(r, 1500));
-
-    const result: QuizResult = {
+    return {
         questions: [
             {
                 id: 1,
-                question: "Qual a melhor analogia para Plasticidade Neural segundo a aula?",
-                options: ["Uma biblioteca em expansão", "Um músculo rígido", "Um computador desligado", "Uma estrada de terra"],
+                question: "Qual o conceito principal abordado?",
+                options: ["Neuroplasticidade", "Computação Quântica", "Direito Romano", "Fotossíntese"],
                 correct_index: 0,
-                explanation: "A analogia da biblioteca reflete como organizamos e expandimos o conhecimento."
+                explanation: "O texto foca na capacidade do cérebro de se adaptar."
             },
             {
                 id: 2,
-                question: "O que acontece quando deixamos de praticar uma habilidade?",
-                options: ["Nada muda", "As conexões sinápticas enfraquecem", "A habilidade se torna permanente", "O cérebro cria novas conexões"],
+                question: "Segundo o roteiro, o que é essencial para o aprendizado?",
+                options: ["Dormir 12h", "Repetição Espaçada", "Comer Carboidratos", "Ouvir Música"],
                 correct_index: 1,
-                explanation: "Sem uso, as conexões sinápticas enfraquecem, dificultando o acesso àquela informação."
+                explanation: "A repetição espaçada foi citada como chave para a memória."
             }
         ]
     };
-
-    console.log(`[INFO] [${ACTION}] Quiz gerado.`, JSON.stringify({ count: result.questions.length }));
-    return result;
 }
 
-// --- 5. ASK DOUBT ---
-
-export async function ask_doubt({ question, context }: { question: string, context: string }): Promise<DoubtResult> {
-    const ACTION = 'ask_doubt';
-    console.log(`[INFO] [${ACTION}] Analisando dúvida: ${question}`);
-
-    await new Promise(r => setTimeout(r, 2000));
-
-    const result: DoubtResult = {
-        answer: `Essa é uma ótima pergunta! Com base no que vimos sobre ${context}, a resposta é que a repetição espaçada fortalece a memória de longo prazo.`,
-        sources: ["Módulo 1: Introdução", "Artigo Científico: Nature 2023"]
-    };
-
-    return result;
+export async function ask_doubt(params: { context: string; question: string }): Promise<{ answer: string }> {
+    // Mocked Doubt for now
+    await new Promise(r => setTimeout(r, 1000));
+    return { answer: "Essa é uma excelente pergunta. Baseado no conteúdo, a resposta seria..." };
 }
 
-export { track_event };
+export function track_event(event_name: string, properties: any = {}) {
+    if (typeof window !== 'undefined') {
+        console.log(`[TRACKING] ${event_name}`, properties);
+    }
+}
