@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useAuth } from './AuthContext';
 
 // --- TYPES ---
 export type PlanType = 'free' | 'premium' | 'pro';
@@ -93,61 +94,70 @@ const MOCK_LIBRARY: Material[] = [
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
+    const { user } = useAuth();
     const [userPlan, setUserPlan] = useState<PlanType>('free');
     const [library, setLibrary] = useState<Material[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
     const [studyPlan, setStudyPlan] = useState<StudyPlan | null>(null);
 
-    // Load Initial Data
+    // Load Data when User Changes
     useEffect(() => {
         const loadData = async () => {
-            // Simulate fetch
-            await new Promise(r => setTimeout(r, 800));
+            if (!user) {
+                setLibrary([]);
+                setStudyPlan(null);
+                setIsLoading(false);
+                return;
+            }
 
-            // Try local storage first
-            const savedLib = localStorage.getItem('cognitive_library');
+            setIsLoading(true);
+            // Simulate fetch
+            await new Promise(r => setTimeout(r, 500));
+
+            // Try local storage with user-specific keys
+            const savedLib = localStorage.getItem(`cognitive_library_${user.id}`);
             if (savedLib) {
                 setLibrary(JSON.parse(savedLib));
             } else {
-                setLibrary(MOCK_LIBRARY);
+                setLibrary(MOCK_LIBRARY); // Default for new users for now
             }
 
-            const savedPlan = localStorage.getItem('cognitive_plan');
+            const savedPlan = localStorage.getItem(`cognitive_plan_${user.id}`);
             if (savedPlan) setUserPlan(savedPlan as PlanType);
 
-            const savedStudyPlan = localStorage.getItem('cognitive_study_plan');
+            const savedStudyPlan = localStorage.getItem(`cognitive_study_plan_${user.id}`);
             if (savedStudyPlan) setStudyPlan(JSON.parse(savedStudyPlan));
 
             setIsLoading(false);
         };
         loadData();
-    }, []);
+    }, [user]);
 
     // Persist Library Changes
     useEffect(() => {
-        if (!isLoading) {
-            localStorage.setItem('cognitive_library', JSON.stringify(library));
+        if (!isLoading && user) {
+            localStorage.setItem(`cognitive_library_${user.id}`, JSON.stringify(library));
         }
-    }, [library, isLoading]);
+    }, [library, isLoading, user]);
 
     // Persist Plan Changes
     useEffect(() => {
-        if (!isLoading) {
-            localStorage.setItem('cognitive_plan', userPlan);
+        if (!isLoading && user) {
+            localStorage.setItem(`cognitive_plan_${user.id}`, userPlan);
         }
-    }, [userPlan, isLoading]);
+    }, [userPlan, isLoading, user]);
 
     // Persist Study Plan Changes
     useEffect(() => {
-        if (!isLoading) {
+        if (!isLoading && user) {
             if (studyPlan) {
-                localStorage.setItem('cognitive_study_plan', JSON.stringify(studyPlan));
+                localStorage.setItem(`cognitive_study_plan_${user.id}`, JSON.stringify(studyPlan));
             } else {
-                localStorage.removeItem('cognitive_study_plan');
+                localStorage.removeItem(`cognitive_study_plan_${user.id}`);
             }
         }
-    }, [studyPlan, isLoading]);
+    }, [studyPlan, isLoading, user]);
 
     const addToLibrary = (material: Material) => {
         setLibrary(prev => [material, ...prev]);

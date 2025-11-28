@@ -36,54 +36,51 @@ export default function Home() {
       </header>
 
       {/* Main Action Area */}
-      {!studyPlan?.active ? (
-        // STATE 1: No Plan -> CTA to Guided Study
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="space-y-6"
-        >
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-neural-900 to-void-900 border border-neural-700/50 p-6 shadow-2xl">
-            <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-neural-500/20 blur-3xl rounded-full" />
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="space-y-8"
+      >
+        {/* ALWAYS SHOW: Create New Plan CTA */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-neural-900 to-void-900 border border-neural-700/50 p-6 shadow-2xl">
+          <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-neural-500/20 blur-3xl rounded-full" />
 
-            <div className="relative z-10 space-y-4">
+          <div className="relative z-10 space-y-4">
+            <div className="flex items-center justify-between">
               <div className="h-12 w-12 rounded-xl bg-neural-500/20 flex items-center justify-center mb-2">
                 <Sparkles className="w-6 h-6 text-neural-300" />
               </div>
-
-              <h2 className="text-2xl font-bold text-white leading-tight">
-                Vamos estudar do jeito inteligente?
-              </h2>
-              <p className="text-neural-400 text-sm leading-relaxed">
-                Crie um plano de estudo personalizado com aulas em áudio geradas a partir dos seus materiais.
-              </p>
-
-              <Link href="/setup" className="block pt-2">
-                <Button size="lg" className="w-full bg-white text-neural-900 hover:bg-neural-100 font-semibold shadow-lg shadow-white/10">
-                  Começar Estudo Guiado
-                  <ArrowRight className="ml-2 w-4 h-4" />
-                </Button>
-              </Link>
+              {studyPlan?.active && (
+                <span className="text-xs bg-neural-800 text-neural-400 px-2 py-1 rounded-full border border-neural-700">
+                  Novo Estudo
+                </span>
+              )}
             </div>
-          </div>
 
-          <div className="text-center">
-            <p className="text-xs text-neural-500">
-              Ou <Link href="/library" className="text-neural-400 underline hover:text-white">explore sua biblioteca</Link> manualmente.
+            <h2 className="text-2xl font-bold text-white leading-tight">
+              {studyPlan?.active ? "Criar outro plano de estudo?" : "Vamos estudar do jeito inteligente?"}
+            </h2>
+            <p className="text-neural-400 text-sm leading-relaxed">
+              {studyPlan?.active
+                ? "Inicie uma nova jornada sobre outro tema. Seus planos anteriores ficam salvos."
+                : "Crie um plano de estudo personalizado com aulas em áudio geradas a partir dos seus materiais."}
             </p>
+
+            <Link href="/setup" className="block pt-2">
+              <Button size="lg" className="w-full bg-white text-neural-900 hover:bg-neural-100 font-semibold shadow-lg shadow-white/10">
+                {studyPlan?.active ? "Iniciar Novo Plano" : "Começar Estudo Guiado"}
+                <ArrowRight className="ml-2 w-4 h-4" />
+              </Button>
+            </Link>
           </div>
-        </motion.div>
-      ) : (
-        // STATE 2: Has Plan -> Continue Studying
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="space-y-6"
-        >
+        </div>
+
+        {/* ACTIVE PLAN (If exists) */}
+        {studyPlan?.active && (
           <section className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-medium text-neural-500 uppercase tracking-wider">Seu Plano de Estudo</h2>
-              <span className="text-xs text-neural-400 bg-neural-800 px-2 py-1 rounded-full">Ativo</span>
+              <h2 className="text-sm font-medium text-neural-500 uppercase tracking-wider">Continuar Estudando</h2>
+              <span className="text-xs text-green-500 bg-green-500/10 px-2 py-1 rounded-full border border-green-500/20">Em andamento</span>
             </div>
 
             {(() => {
@@ -123,8 +120,8 @@ export default function Home() {
                         />
                       </div>
 
-                      <Button className="w-full mt-2">
-                        {nextLesson?.status === 'in_progress' ? "Retomar Aula" : "Iniciar Aula"}
+                      <Button className="w-full mt-2" variant="secondary">
+                        {nextLesson?.status === 'in_progress' ? "Retomar Aula" : "Ir para o Player"}
                       </Button>
                     </div>
                   </Card>
@@ -132,49 +129,49 @@ export default function Home() {
               );
             })()}
           </section>
+        )}
 
-          {/* Recent Modules List */}
-          {hasContent && (
-            <section className="space-y-3">
-              <div className="flex items-center justify-between px-1">
-                <h3 className="text-sm font-medium text-neural-400">Recentes</h3>
-                <Link href="/library" className="text-xs text-neural-500 hover:text-white transition-colors">
-                  Ver tudo
+        {/* RECENT LIBRARY ITEMS */}
+        {hasContent && (
+          <section className="space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <h3 className="text-sm font-medium text-neural-400">Recentes</h3>
+              <Link href="/library" className="text-xs text-neural-500 hover:text-white transition-colors">
+                Ver tudo
+              </Link>
+            </div>
+
+            <div className="space-y-2">
+              {library.slice(0, 3).map((item) => (
+                <Link href="/player" key={item.id}>
+                  <Card className="p-3 flex items-center gap-3 hover:bg-white/5 transition-colors cursor-pointer border-transparent hover:border-neural-700/50">
+                    <div
+                      className="h-10 w-10 rounded-lg shrink-0 flex items-center justify-center text-white font-bold text-sm shadow-sm"
+                      style={{ backgroundColor: item.cover_color }}
+                    >
+                      {item.title.charAt(0)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-sm font-medium text-white truncate">{item.title}</h4>
+                      <div className="flex items-center gap-2 text-xs text-neural-500">
+                        <span className="flex items-center gap-1">
+                          <BookOpen className="w-3 h-3" /> {item.modules_count}
+                        </span>
+                        {item.status === 'completed' && (
+                          <span className="text-green-500">Concluído</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-neural-600">
+                      <Play className="w-4 h-4" />
+                    </div>
+                  </Card>
                 </Link>
-              </div>
-
-              <div className="space-y-2">
-                {library.slice(0, 3).map((item) => (
-                  <Link href="/player" key={item.id}>
-                    <Card className="p-3 flex items-center gap-3 hover:bg-white/5 transition-colors cursor-pointer border-transparent hover:border-neural-700/50">
-                      <div
-                        className="h-10 w-10 rounded-lg shrink-0 flex items-center justify-center text-white font-bold text-sm shadow-sm"
-                        style={{ backgroundColor: item.cover_color }}
-                      >
-                        {item.title.charAt(0)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="text-sm font-medium text-white truncate">{item.title}</h4>
-                        <div className="flex items-center gap-2 text-xs text-neural-500">
-                          <span className="flex items-center gap-1">
-                            <BookOpen className="w-3 h-3" /> {item.modules_count}
-                          </span>
-                          {item.status === 'completed' && (
-                            <span className="text-green-500">Concluído</span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="text-neural-600">
-                        <Play className="w-4 h-4" />
-                      </div>
-                    </Card>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          )}
-        </motion.div>
-      )}
+              ))}
+            </div>
+          </section>
+        )}
+      </motion.div>
     </div>
   );
 }

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AppProvider } from "@/context/AppContext";
+import { AuthProvider } from "@/context/AuthContext";
 import { Navigation } from "@/components/Navigation";
 import { OfflineBanner } from "@/components/OfflineBanner";
 
@@ -30,13 +31,15 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased pb-24`}
       >
-        <AppProvider>
-          <OfflineBanner />
-          <main className="min-h-screen max-w-md mx-auto relative overflow-hidden">
-            {children}
-          </main>
-          <Navigation />
-        </AppProvider>
+        <AuthProvider>
+          <AppProvider>
+            <OfflineBanner />
+            <main className="min-h-screen max-w-md mx-auto relative overflow-hidden">
+              {children}
+            </main>
+            <Navigation />
+          </AppProvider>
+        </AuthProvider>
       </body>
     </html>
   );
