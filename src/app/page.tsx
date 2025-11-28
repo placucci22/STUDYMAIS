@@ -1,21 +1,49 @@
 "use client";
 
 import { useApp } from "@/context/AppContext";
+import { useAuth } from "@/context/AuthContext";
 import { Card, Button, ProgressBar } from "@/components/ui";
-import { Play, Upload, BrainCircuit, Sparkles, BookOpen, ArrowRight } from "lucide-react";
+import { Play, Upload, BrainCircuit, Sparkles, BookOpen, ArrowRight, LogIn } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 
 export default function Home() {
   const { library, isLoading, studyPlan } = useApp();
+  const { user, isLoading: isAuthLoading } = useAuth();
 
   const inProgress = library.filter(m => m.status === 'in_progress').sort((a, b) => b.last_accessed - a.last_accessed);
   const hasContent = library.length > 0;
 
-  if (isLoading) {
+  if (isLoading || isAuthLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="animate-pulse-slow text-neural-400">Sincronizando córtex...</div>
+      </div>
+    );
+  }
+
+  // STATE 0: Not Logged In
+  if (!user) {
+    return (
+      <div className="p-6 space-y-8 pt-24 pb-24 flex flex-col items-center justify-center min-h-[80vh] text-center">
+        <div className="h-24 w-24 rounded-full bg-neural-800 border border-neural-600 flex items-center justify-center mb-6 shadow-2xl shadow-neural-500/20">
+          <BrainCircuit className="w-12 h-12 text-neural-400" />
+        </div>
+
+        <div className="space-y-4 max-w-sm">
+          <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-neural-400">
+            Cognitive OS
+          </h1>
+          <p className="text-neural-400 text-lg">
+            Seu sistema operacional de aprendizado.
+          </p>
+        </div>
+
+        <Link href="/auth/login" className="w-full max-w-xs">
+          <Button size="lg" className="w-full h-14 text-lg shadow-xl shadow-neural-500/10">
+            Entrar no Sistema <LogIn className="ml-2 w-5 h-5" />
+          </Button>
+        </Link>
       </div>
     );
   }
@@ -30,9 +58,11 @@ export default function Home() {
           </h1>
           <p className="text-neural-400 text-sm">Seu sistema cognitivo está ativo.</p>
         </div>
-        <div className="h-10 w-10 rounded-full bg-neural-800 border border-neural-600 flex items-center justify-center">
-          <BrainCircuit className="w-5 h-5 text-neural-400" />
-        </div>
+        <Link href="/profile">
+          <div className="h-10 w-10 rounded-full bg-neural-800 border border-neural-600 flex items-center justify-center hover:bg-neural-700 transition-colors cursor-pointer">
+            <BrainCircuit className="w-5 h-5 text-neural-400" />
+          </div>
+        </Link>
       </header>
 
       {/* Main Action Area */}

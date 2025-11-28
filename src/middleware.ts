@@ -60,21 +60,48 @@ export async function middleware(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser();
 
     // Protected routes
-    const protectedRoutes = ['/setup', '/library', '/profile', '/player'];
+    const protectedRoutes = ['/app', '/study', '/player', '/profile'];
     const isProtectedRoute = protectedRoutes.some(route => request.nextUrl.pathname.startsWith(route));
+    const isAuthRoute = request.nextUrl.pathname.startsWith('/auth');
+    const isProfileSetup = request.nextUrl.pathname === '/profile/setup';
 
+    // 1. If accessing protected route without user -> Login
     if (isProtectedRoute && !user) {
         const redirectUrl = request.nextUrl.clone();
-        redirectUrl.pathname = '/login';
+        redirectUrl.pathname = '/auth/login';
         redirectUrl.searchParams.set('redirectedFrom', request.nextUrl.pathname);
         return NextResponse.redirect(redirectUrl);
     }
 
-    // Auth routes (redirect to home if already logged in)
-    if (request.nextUrl.pathname === '/login' && user) {
-        const redirectUrl = request.nextUrl.clone();
-        redirectUrl.pathname = '/';
-        return NextResponse.redirect(redirectUrl);
+    // 2. If user is logged in
+    if (user) {
+        // Check if profile exists (We can't easily query DB in middleware without Service Role, 
+        // but we can check a custom claim or just let the client handle the redirect if profile is missing.
+        // However, the prompt asks for middleware protection.
+        // Querying DB in middleware is possible with supabase client.
+
+        // Optimization: Only check profile if NOT already on setup page and NOT on a static asset
+        if (!isProfileSetup && !request.nextUrl.pathname.startsWith('/_next') && !request.nextUrl.pathname.startsWith('/api')) {
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('id')
+                .eq('id', user.id)
+                .single();
+
+            // If no profile -> Force Setup
+            if (!profile) {
+                const redirectUrl = request.nextUrl.clone();
+                redirectUrl.pathname = '/profile/setup';
+                return NextResponse.redirect(redirectUrl);
+            }
+        }
+
+        // If on Auth pages -> Home
+        if (isAuthRoute) {
+            const redirectUrl = request.nextUrl.clone();
+            redirectUrl.pathname = '/';
+            return NextResponse.redirect(redirectUrl);
+        }
     }
 
     return response;
@@ -82,10 +109,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
     matcher: [
-        '/setup/:path*',
-        '/library/:path*',
-        '/profile/:path*',
-        '/player/:path*',
-        '/login',
+        '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
     ],
 };
