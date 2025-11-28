@@ -20,6 +20,8 @@ export interface Material {
 interface AppContextType {
     userPlan: PlanType;
     setUserPlan: (plan: PlanType) => void;
+    studyPlan: { active: boolean; title?: string } | null;
+    setStudyPlan: (plan: { active: boolean; title?: string } | null) => void;
     library: Material[];
     addToLibrary: (material: Material) => void;
     updateProgress: (id: number, progress: number) => void;
@@ -59,6 +61,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const [library, setLibrary] = useState<Material[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
+    const [studyPlan, setStudyPlan] = useState<{ active: boolean; title?: string } | null>(null);
+
     // Load Initial Data
     useEffect(() => {
         const loadData = async () => {
@@ -75,6 +79,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
             const savedPlan = localStorage.getItem('cognitive_plan');
             if (savedPlan) setUserPlan(savedPlan as PlanType);
+
+            const savedStudyPlan = localStorage.getItem('cognitive_study_plan');
+            if (savedStudyPlan) setStudyPlan(JSON.parse(savedStudyPlan));
 
             setIsLoading(false);
         };
@@ -94,6 +101,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
             localStorage.setItem('cognitive_plan', userPlan);
         }
     }, [userPlan, isLoading]);
+
+    // Persist Study Plan Changes
+    useEffect(() => {
+        if (!isLoading) {
+            if (studyPlan) {
+                localStorage.setItem('cognitive_study_plan', JSON.stringify(studyPlan));
+            } else {
+                localStorage.removeItem('cognitive_study_plan');
+            }
+        }
+    }, [studyPlan, isLoading]);
 
     const addToLibrary = (material: Material) => {
         setLibrary(prev => [material, ...prev]);
@@ -123,6 +141,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         <AppContext.Provider value={{
             userPlan,
             setUserPlan,
+            studyPlan,
+            setStudyPlan,
             library,
             addToLibrary,
             updateProgress,

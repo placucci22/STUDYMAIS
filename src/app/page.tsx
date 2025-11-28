@@ -2,12 +2,12 @@
 
 import { useApp } from "@/context/AppContext";
 import { Card, Button, ProgressBar } from "@/components/ui";
-import { Play, Upload, BrainCircuit, Sparkles } from "lucide-react";
+import { Play, Upload, BrainCircuit, Sparkles, BookOpen, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 
 export default function Home() {
-  const { library, isLoading } = useApp();
+  const { library, isLoading, studyPlan } = useApp();
 
   const inProgress = library.filter(m => m.status === 'in_progress').sort((a, b) => b.last_accessed - a.last_accessed);
   const hasContent = library.length > 0;
@@ -15,18 +15,18 @@ export default function Home() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <div className="animate-pulse-slow text-neural-400">Carregando seu segundo cérebro...</div>
+        <div className="animate-pulse-slow text-neural-400">Sincronizando córtex...</div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-8 pt-12">
+    <div className="p-6 space-y-8 pt-12 pb-24">
       {/* Header */}
       <header className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-neural-300">
-            Bom dia, Visionário.
+            Olá, Visionário.
           </h1>
           <p className="text-neural-400 text-sm">Seu sistema cognitivo está ativo.</p>
         </div>
@@ -35,85 +35,136 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Tabula Rasa (Empty State) */}
-      {!hasContent && (
+      {/* Main Action Area */}
+      {!studyPlan?.active ? (
+        // STATE 1: No Plan -> CTA to Guided Study
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center py-12 space-y-6"
+          className="space-y-6"
         >
-          <div className="relative w-32 h-32 mx-auto">
-            <div className="absolute inset-0 bg-neural-500/20 blur-3xl rounded-full animate-pulse-slow" />
-            <Sparkles className="w-full h-full text-neural-300 opacity-80 animate-float" />
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-neural-900 to-void-900 border border-neural-700/50 p-6 shadow-2xl">
+            <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-neural-500/20 blur-3xl rounded-full" />
+
+            <div className="relative z-10 space-y-4">
+              <div className="h-12 w-12 rounded-xl bg-neural-500/20 flex items-center justify-center mb-2">
+                <Sparkles className="w-6 h-6 text-neural-300" />
+              </div>
+
+              <h2 className="text-2xl font-bold text-white leading-tight">
+                Vamos estudar do jeito inteligente?
+              </h2>
+              <p className="text-neural-400 text-sm leading-relaxed">
+                Crie um plano de estudo personalizado com aulas em áudio geradas a partir dos seus materiais.
+              </p>
+
+              <Link href="/setup" className="block pt-2">
+                <Button size="lg" className="w-full bg-white text-neural-900 hover:bg-neural-100 font-semibold shadow-lg shadow-white/10">
+                  Começar Estudo Guiado
+                  <ArrowRight className="ml-2 w-4 h-4" />
+                </Button>
+              </Link>
+            </div>
           </div>
-          <div className="space-y-2">
-            <h2 className="text-xl font-semibold text-white">Tabula Rasa</h2>
-            <p className="text-neural-400 max-w-xs mx-auto">
-              Sua mente está pronta para expandir. Comece alimentando o sistema com conhecimento.
+
+          <div className="text-center">
+            <p className="text-xs text-neural-500">
+              Ou <Link href="/library" className="text-neural-400 underline hover:text-white">explore sua biblioteca</Link> manualmente.
             </p>
           </div>
-          <Link href="/upload">
-            <Button size="lg" className="w-full max-w-xs">
-              <Upload className="mr-2 w-5 h-5" />
-              Ingerir Primeiro Conteúdo
-            </Button>
-          </Link>
         </motion.div>
-      )}
+      ) : (
+        // STATE 2: Has Plan -> Continue Studying
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="space-y-6"
+        >
+          <section className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-medium text-neural-500 uppercase tracking-wider">Seu Plano de Estudo</h2>
+              <span className="text-xs text-neural-400 bg-neural-800 px-2 py-1 rounded-full">Ativo</span>
+            </div>
 
-      {/* Continue Studying */}
-      {hasContent && inProgress.length > 0 && (
-        <section className="space-y-4">
-          <h2 className="text-sm font-medium text-neural-500 uppercase tracking-wider">Continuar Estudando</h2>
-          <Link href="/player">
-            <Card className="group hover:border-neural-500/50 transition-colors cursor-pointer relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <Play className="w-24 h-24 text-neural-500" />
-              </div>
-              <div className="space-y-4 relative z-10">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <span className="text-xs font-medium text-neural-400 bg-neural-900/50 px-2 py-1 rounded-full">
-                      Módulo Atual
+            <Link href="/player">
+              <Card className="group hover:border-neural-500/50 transition-all cursor-pointer relative overflow-hidden bg-gradient-to-br from-neural-900/80 to-void-900/80 border-neural-700/50">
+                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                  <Play className="w-24 h-24 text-neural-500" />
+                </div>
+
+                <div className="p-6 space-y-4 relative z-10">
+                  <div className="space-y-1">
+                    <span className="text-xs font-medium text-neural-300 flex items-center gap-1">
+                      <Sparkles className="w-3 h-3" /> Próxima Sessão
                     </span>
-                    <h3 className="text-lg font-semibold text-white mt-2 line-clamp-1">
-                      {inProgress[0].title}
+                    <h3 className="text-xl font-bold text-white line-clamp-2">
+                      {inProgress[0]?.title || "Continuar Jornada"}
                     </h3>
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-xs text-neural-400">
-                    <span>Progresso</span>
-                    <span>{inProgress[0].progress}%</span>
-                  </div>
-                  <ProgressBar progress={inProgress[0].progress} />
-                </div>
-              </div>
-            </Card>
-          </Link>
-        </section>
-      )}
 
-      {/* Quick Actions */}
-      {hasContent && (
-        <section className="grid grid-cols-2 gap-4">
-          <Link href="/upload">
-            <Card className="flex flex-col items-center justify-center gap-3 py-8 hover:bg-white/5 transition-colors cursor-pointer">
-              <div className="h-12 w-12 rounded-full bg-neural-500/10 flex items-center justify-center">
-                <Upload className="w-6 h-6 text-neural-400" />
+                  {inProgress[0] ? (
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-xs text-neural-400">
+                        <span>Progresso do Módulo</span>
+                        <span>{inProgress[0].progress}%</span>
+                      </div>
+                      <ProgressBar progress={inProgress[0].progress} className="h-2" />
+                    </div>
+                  ) : (
+                    <p className="text-sm text-neural-400">
+                      Seu plano está pronto. Vamos começar?
+                    </p>
+                  )}
+
+                  <Button className="w-full mt-2">
+                    {inProgress.length > 0 ? "Retomar Estudo" : "Iniciar Sessão"}
+                  </Button>
+                </div>
+              </Card>
+            </Link>
+          </section>
+
+          {/* Recent Modules List */}
+          {hasContent && (
+            <section className="space-y-3">
+              <div className="flex items-center justify-between px-1">
+                <h3 className="text-sm font-medium text-neural-400">Recentes</h3>
+                <Link href="/library" className="text-xs text-neural-500 hover:text-white transition-colors">
+                  Ver tudo
+                </Link>
               </div>
-              <span className="font-medium text-sm">Novo Upload</span>
-            </Card>
-          </Link>
-          <Link href="/quiz">
-            <Card className="flex flex-col items-center justify-center gap-3 py-8 hover:bg-white/5 transition-colors cursor-pointer">
-              <div className="h-12 w-12 rounded-full bg-synapse-500/10 flex items-center justify-center">
-                <BrainCircuit className="w-6 h-6 text-synapse-500" />
+
+              <div className="space-y-2">
+                {library.slice(0, 3).map((item) => (
+                  <Link href="/player" key={item.id}>
+                    <Card className="p-3 flex items-center gap-3 hover:bg-white/5 transition-colors cursor-pointer border-transparent hover:border-neural-700/50">
+                      <div
+                        className="h-10 w-10 rounded-lg shrink-0 flex items-center justify-center text-white font-bold text-sm shadow-sm"
+                        style={{ backgroundColor: item.cover_color }}
+                      >
+                        {item.title.charAt(0)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm font-medium text-white truncate">{item.title}</h4>
+                        <div className="flex items-center gap-2 text-xs text-neural-500">
+                          <span className="flex items-center gap-1">
+                            <BookOpen className="w-3 h-3" /> {item.modules_count}
+                          </span>
+                          {item.status === 'completed' && (
+                            <span className="text-green-500">Concluído</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-neural-600">
+                        <Play className="w-4 h-4" />
+                      </div>
+                    </Card>
+                  </Link>
+                ))}
               </div>
-              <span className="font-medium text-sm">Quiz Rápido</span>
-            </Card>
-          </Link>
-        </section>
+            </section>
+          )}
+        </motion.div>
       )}
     </div>
   );
