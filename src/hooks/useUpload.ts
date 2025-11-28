@@ -29,9 +29,10 @@ export function useUpload() {
         if (!file) return;
 
         // Validation
-        if (file.size > 100 * 1024 * 1024) {
+        // Vercel Serverless Limit is ~4.5MB. We set 4MB to be safe.
+        if (file.size > 4 * 1024 * 1024) {
             setStatus('error');
-            setError("Arquivo muito grande. O limite é 100MB.");
+            setError("O arquivo é muito grande para o plano gratuito (Lim: 4MB). Tente um PDF menor.");
             track_event('ingest_fail', { error: "Size Limit", file: file.name });
             return;
         }

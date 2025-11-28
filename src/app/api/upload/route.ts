@@ -3,6 +3,7 @@ import PDFParser from 'pdf2json';
 
 export async function POST(req: NextRequest) {
     try {
+        console.log("Starting PDF Upload processing...");
         const formData = await req.formData();
         const file = formData.get('file') as File;
 
