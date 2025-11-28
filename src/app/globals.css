@@ -1,0 +1,76 @@
+@import "tailwindcss";
+
+:root {
+  /* Base Colors */
+  --background: #0F0F1A;
+  --foreground: #F5F3FF;
+  
+  /* Neural Violet Palette */
+  --neural-50: #F5F3FF;
+  --neural-100: #EDE9FE;
+  --neural-200: #DDD6FE;
+  --neural-300: #C4B5FD;
+  --neural-400: #A78BFA;
+  --neural-500: #8B5CF6;
+  --neural-600: #7C3AED;
+  --neural-700: #6D28D9;
+  --neural-800: #5B21B6;
+  --neural-900: #4C1D95;
+
+  /* Synapse Blue */
+  --synapse-500: #3B82F6;
+
+  /* Void (Dark Backgrounds) */
+  --void-900: #0F0F1A;
+  --void-800: #181825;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  
+  --color-neural-50: var(--neural-50);
+  --color-neural-100: var(--neural-100);
+  --color-neural-200: var(--neural-200);
+  --color-neural-300: var(--neural-300);
+  --color-neural-400: var(--neural-400);
+  --color-neural-500: var(--neural-500);
+  --color-neural-600: var(--neural-600);
+  --color-neural-700: var(--neural-700);
+  --color-neural-800: var(--neural-800);
+  --color-neural-900: var(--neural-900);
+
+  --color-synapse-500: var(--synapse-500);
+
+  --color-void-900: var(--void-900);
+  --color-void-800: var(--void-800);
+
+  --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-float: float 6s ease-in-out infinite;
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Glassmorphism Utilities */
+.glass {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glass-card {
+  background: rgba(24, 24, 37, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(139, 92, 246, 0.1);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+}
