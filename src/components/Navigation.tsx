@@ -8,6 +8,11 @@ import { cn } from './ui';
 export function Navigation() {
     const pathname = usePathname();
 
+    // Hide navigation on setup and auth pages
+    if (pathname === '/setup' || pathname.startsWith('/auth')) {
+        return null;
+    }
+
     const links = [
         { href: '/', icon: Home, label: 'Home' },
         { href: '/upload', icon: Upload, label: 'Upload' },
