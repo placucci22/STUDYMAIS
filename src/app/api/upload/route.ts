@@ -10,6 +10,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'No fileUrl provided' }, { status: 400 });
         }
 
+        console.time('download');
         console.log(`Downloading PDF from: ${fileUrl}`);
         const response = await fetch(fileUrl);
 
@@ -19,7 +20,9 @@ export async function POST(req: NextRequest) {
 
         const arrayBuffer = await response.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
+        console.timeEnd('download');
 
+        console.time('parse');
         const pdfParser = new PDFParser(null, true); // true = text only
 
         const parsedText = await new Promise<string>((resolve, reject) => {
@@ -32,6 +35,7 @@ export async function POST(req: NextRequest) {
 
             pdfParser.parseBuffer(buffer);
         });
+        console.timeEnd('parse');
 
         return NextResponse.json({
             text: parsedText,
