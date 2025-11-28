@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
         // Upload to Supabase
         const fileName = `audio_${Date.now()}_${Math.random().toString(36).substring(7)}.mp3`;
         const { error: uploadError } = await supabase.storage
-            .from('uploads')
+            .from('audio')
             .upload(fileName, audioBuffer, {
                 contentType: 'audio/mpeg',
                 upsert: false
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
         }
 
         const { data: { publicUrl } } = supabase.storage
-            .from('uploads')
+            .from('audio')
             .getPublicUrl(fileName);
 
         return NextResponse.json({
