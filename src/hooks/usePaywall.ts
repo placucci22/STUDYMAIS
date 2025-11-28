@@ -6,6 +6,9 @@ import { track_event } from '@/lib/backend/actions';
 
 export function usePaywall() {
     const { userPlan, setUserPlan } = useApp();
+    // TEMPORARY: Paywall disabled for testing
+    const hasAccess = true;
+    // const hasAccess = userPlan === 'pro' || userPlan === 'lifetime';
     const [isOpen, setIsOpen] = useState(false);
     const [triggerFeature, setTriggerFeature] = useState<string>('');
 

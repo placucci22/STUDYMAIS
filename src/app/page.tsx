@@ -22,31 +22,8 @@ export default function Home() {
     );
   }
 
-  // STATE 0: Not Logged In
-  if (!user) {
-    return (
-      <div className="p-6 space-y-8 pt-24 pb-24 flex flex-col items-center justify-center min-h-[80vh] text-center">
-        <div className="h-24 w-24 rounded-full bg-neural-800 border border-neural-600 flex items-center justify-center mb-6 shadow-2xl shadow-neural-500/20">
-          <BrainCircuit className="w-12 h-12 text-neural-400" />
-        </div>
-
-        <div className="space-y-4 max-w-sm">
-          <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-neural-400">
-            Cognitive OS
-          </h1>
-          <p className="text-neural-400 text-lg">
-            Seu sistema operacional de aprendizado.
-          </p>
-        </div>
-
-        <Link href="/auth/login" className="w-full max-w-xs">
-          <Button size="lg" className="w-full h-14 text-lg shadow-xl shadow-neural-500/10">
-            Entrar no Sistema <LogIn className="ml-2 w-5 h-5" />
-          </Button>
-        </Link>
-      </div>
-    );
-  }
+  // STATE 0: Not Logged In - REMOVED (Public Access Allowed)
+  // if (!user) { ... }
 
   return (
     <div className="p-6 space-y-8 pt-12 pb-24">
@@ -58,11 +35,19 @@ export default function Home() {
           </h1>
           <p className="text-neural-400 text-sm">Seu sistema cognitivo está ativo.</p>
         </div>
-        <Link href="/profile">
-          <div className="h-10 w-10 rounded-full bg-neural-800 border border-neural-600 flex items-center justify-center hover:bg-neural-700 transition-colors cursor-pointer">
-            <BrainCircuit className="w-5 h-5 text-neural-400" />
-          </div>
-        </Link>
+        {user ? (
+          <Link href="/profile">
+            <div className="h-10 w-10 rounded-full bg-neural-800 border border-neural-600 flex items-center justify-center hover:bg-neural-700 transition-colors cursor-pointer">
+              <BrainCircuit className="w-5 h-5 text-neural-400" />
+            </div>
+          </Link>
+        ) : (
+          <Link href="/auth/login">
+            <Button variant="ghost" size="sm" className="text-neural-400 hover:text-white">
+              Entrar <LogIn className="ml-2 w-4 h-4" />
+            </Button>
+          </Link>
+        )}
       </header>
 
       {/* Main Action Area */}

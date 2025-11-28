@@ -60,7 +60,7 @@ export async function middleware(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser();
 
     // Protected routes
-    const protectedRoutes = ['/app', '/study', '/player', '/profile'];
+    const protectedRoutes = ['/app', '/study', '/player', '/profile', '/library'];
     const isProtectedRoute = protectedRoutes.some(route => request.nextUrl.pathname.startsWith(route));
     const isAuthRoute = request.nextUrl.pathname.startsWith('/auth');
     const isProfileSetup = request.nextUrl.pathname === '/profile/setup';
@@ -75,11 +75,6 @@ export async function middleware(request: NextRequest) {
 
     // 2. If user is logged in
     if (user) {
-        // Check if profile exists (We can't easily query DB in middleware without Service Role, 
-        // but we can check a custom claim or just let the client handle the redirect if profile is missing.
-        // However, the prompt asks for middleware protection.
-        // Querying DB in middleware is possible with supabase client.
-
         // Optimization: Only check profile if NOT already on setup page and NOT on a static asset
         if (!isProfileSetup && !request.nextUrl.pathname.startsWith('/_next') && !request.nextUrl.pathname.startsWith('/api')) {
             const { data: profile } = await supabase
@@ -96,7 +91,7 @@ export async function middleware(request: NextRequest) {
             }
         }
 
-        // If on Auth pages -> Home
+        // If on Auth pages -> Home (or redirect back if param exists)
         if (isAuthRoute) {
             const redirectUrl = request.nextUrl.clone();
             redirectUrl.pathname = '/';

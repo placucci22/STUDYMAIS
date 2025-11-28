@@ -1,15 +1,18 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Button, Card } from '@/components/ui';
 import { motion } from 'framer-motion';
 import { Loader2, Mail, ArrowRight, Lock } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function AuthLoginPage() {
+function LoginContent() {
     const { signInWithOtp } = useAuth();
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const redirect = searchParams.get('redirect');
+    const action = searchParams.get('action');
 
     const [email, setEmail] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -22,8 +25,13 @@ export default function AuthLoginPage() {
         try {
             const { error } = await signInWithOtp(email);
             if (error) throw error;
-            // Pass email to verify page via query param for convenience
-            router.push(`/auth/verify?email=${encodeURIComponent(email)}`);
+
+            // Construct verify URL with all params
+            let verifyUrl = `/auth/verify?email=${encodeURIComponent(email)}`;
+            if (redirect) verifyUrl += `&redirect=${encodeURIComponent(redirect)}`;
+            if (action) verifyUrl += `&action=${encodeURIComponent(action)}`;
+
+            router.push(verifyUrl);
         } catch (err: any) {
             console.error(err);
             setError(err.message || "Erro ao enviar código.");
@@ -91,5 +99,13 @@ export default function AuthLoginPage() {
                 </Card>
             </motion.div>
         </div>
+    );
+}
+
+export default function AuthLoginPage() {
+    return (
+        <Suspense fallback={<div>Carregando...</div>}>
+            <LoginContent />
+        </Suspense>
     );
 }

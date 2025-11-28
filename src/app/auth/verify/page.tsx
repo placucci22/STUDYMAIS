@@ -13,6 +13,8 @@ function VerifyContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const email = searchParams.get('email') || '';
+    const redirect = searchParams.get('redirect');
+    const action = searchParams.get('action');
 
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -23,11 +25,18 @@ function VerifyContent() {
         try {
             const { error } = await verifyOtp(email, otp);
             if (error) throw error;
-            // Redirect logic will be handled by AuthContext or Middleware, 
-            // but for now let's push to home or profile setup check
-            // Ideally, we check if profile exists here or in a layout wrapper.
-            // For simplicity, let's go to home, and middleware/layout will redirect to setup if needed.
-            router.push('/');
+
+            // Success!
+            // Check if we have a redirect target
+            if (redirect) {
+                // If we have an action, append it
+                let target = redirect;
+                if (action) target += `${target.includes('?') ? '&' : '?'}action=${action}`;
+                router.push(target);
+            } else {
+                // Default flow: Go to home (middleware will intercept if profile is missing)
+                router.push('/');
+            }
         } catch (err: any) {
             console.error(err);
             setError("Código inválido ou expirado.");

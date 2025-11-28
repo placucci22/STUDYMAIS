@@ -48,8 +48,19 @@ export default function ProfileSetupPage() {
 
             if (error) throw error;
 
-            // Redirect to home after successful setup
-            router.push('/');
+            // Redirect to home or original destination
+            const params = new URLSearchParams(window.location.search);
+            const redirect = params.get('redirect');
+            const action = params.get('action');
+
+            if (redirect) {
+                let target = redirect;
+                if (action) target += `${target.includes('?') ? '&' : '?'}action=${action}`;
+                router.push(target);
+            } else {
+                router.push('/');
+            }
+
             router.refresh(); // Ensure middleware re-runs or context updates
         } catch (error) {
             console.error('Error saving profile:', error);
