@@ -66,7 +66,9 @@ export function useQuiz() {
 
         setFeedback({
             type: isCorrect ? 'correct' : 'incorrect',
-            message: isCorrect ? "Exato!" : currentQuestion.explanation
+            message: isCorrect
+                ? "Você dominou esse conceito."
+                : `Ainda não. Vamos ajustar sua compreensão. ${currentQuestion.explanation}`
         });
 
         if (isCorrect) setScore(prev => prev + 1);

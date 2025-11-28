@@ -4,7 +4,7 @@ import { usePlayer } from "@/hooks/usePlayer";
 import { useApp } from "@/context/AppContext";
 import { Card, Button, ProgressBar } from "@/components/ui";
 import { Play, Pause, SkipBack, SkipForward, FastForward, Loader2, AlertCircle } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
@@ -53,24 +53,46 @@ export default function PlayerPage() {
 
     if (status === 'generating_script' || status === 'generating_audio') {
         return (
-            <div className="flex flex-col items-center justify-center h-[80vh] p-6 text-center space-y-8">
-                <div className="relative h-32 w-32">
-                    <div className="absolute inset-0 bg-neural-500/20 blur-3xl rounded-full animate-pulse-slow" />
+            <div className="flex flex-col items-center justify-center h-[80vh] p-6 text-center space-y-12">
+                <div className="relative h-48 w-48 flex items-center justify-center">
+                    {/* Neural Scanner Effect */}
+                    <div className="absolute inset-0 bg-neural-500/10 blur-3xl rounded-full animate-pulse-slow" />
+
+                    {/* Rotating Rings */}
                     <motion.div
                         animate={{ rotate: 360 }}
-                        transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-                        className="w-full h-full border-4 border-neural-500/30 rounded-full border-t-neural-500"
+                        transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                        className="absolute inset-0 rounded-full border border-neural-500/20 border-t-neural-500/60 border-r-transparent"
                     />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        <Loader2 className="w-10 h-10 text-neural-400 animate-spin" />
+                    <motion.div
+                        animate={{ rotate: -360 }}
+                        transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
+                        className="absolute inset-4 rounded-full border border-void-500/20 border-b-neural-400/40 border-l-transparent"
+                    />
+
+                    {/* Central Brain/Core */}
+                    <div className="relative z-10 bg-neural-900/80 backdrop-blur-sm p-6 rounded-2xl border border-neural-700/50 shadow-2xl">
+                        <Loader2 className="w-12 h-12 text-neural-300 animate-spin" />
                     </div>
+
+                    {/* Scanning Beam */}
+                    <motion.div
+                        animate={{ top: ['0%', '100%', '0%'] }}
+                        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                        className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-neural-400/50 to-transparent blur-sm z-20"
+                    />
                 </div>
-                <div className="space-y-2">
-                    <h2 className="text-xl font-bold text-white">
-                        {status === 'generating_script' ? 'Decodificando Conceitos...' : 'Sintetizando Voz Neural...'}
-                    </h2>
-                    <p className="text-neural-400 text-sm max-w-xs mx-auto">
-                        A IA está transformando seu PDF em uma aula de áudio imersiva.
+
+                <div className="space-y-3 max-w-md mx-auto">
+                    <motion.h2
+                        animate={{ opacity: [0.5, 1, 0.5] }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                        className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-neural-300 via-white to-neural-300"
+                    >
+                        {status === 'generating_script' ? 'Decodificando Estrutura...' : 'Sintetizando Voz Neural...'}
+                    </motion.h2>
+                    <p className="text-neural-400 text-sm leading-relaxed">
+                        A IA está convertendo seu material em uma experiência de áudio imersiva.
                     </p>
                 </div>
             </div>
@@ -78,74 +100,131 @@ export default function PlayerPage() {
     }
 
     return (
-        <div className="flex flex-col h-[calc(100vh-80px)] p-6 pt-12">
+        <div className="flex flex-col h-[calc(100vh-80px)] p-6 pt-12 max-w-md mx-auto w-full">
             {/* Visualizer / Cover */}
-            <div className="flex-1 flex items-center justify-center relative">
-                <div className="absolute inset-0 bg-neural-500/10 blur-3xl rounded-full animate-pulse-slow" />
-                <Card className="w-64 h-64 flex items-center justify-center bg-neural-900/50 border-neural-700/50 relative z-10 overflow-hidden">
-                    {/* Fake Waveform */}
-                    <div className="flex items-center gap-1 h-32">
-                        {[...Array(20)].map((_, i) => (
-                            <motion.div
-                                key={i}
-                                animate={{ height: status === 'playing' ? [20, 60, 30, 80, 40] : 10 }}
-                                transition={{ duration: 0.5, repeat: Infinity, repeatType: "reverse", delay: i * 0.05 }}
-                                className="w-2 bg-neural-500 rounded-full opacity-80"
-                            />
-                        ))}
-                    </div>
-                </Card>
+            <div className="flex-1 flex flex-col items-center justify-center relative min-h-[300px]">
+                <div className="absolute inset-0 bg-gradient-to-b from-neural-500/5 to-transparent blur-3xl rounded-full pointer-events-none" />
+
+                {/* Liquid Waveform Container */}
+                <div className="relative w-full aspect-square max-w-[280px] flex items-center justify-center">
+                    {/* Outer Glow */}
+                    <motion.div
+                        animate={{ scale: status === 'playing' ? [1, 1.05, 1] : 1, opacity: status === 'playing' ? 0.6 : 0.3 }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                        className="absolute inset-0 bg-neural-500/20 blur-3xl rounded-full"
+                    />
+
+                    {/* Main Visualizer */}
+                    <Card className="w-full h-full rounded-[2.5rem] bg-gradient-to-br from-neural-900/90 to-void-900/90 border-neural-700/30 backdrop-blur-xl flex items-center justify-center overflow-hidden shadow-2xl relative z-10">
+                        <div className="flex items-center justify-center gap-1.5 h-32 w-full px-8">
+                            {[...Array(12)].map((_, i) => (
+                                <motion.div
+                                    key={i}
+                                    animate={{
+                                        height: status === 'playing'
+                                            ? [24, Math.random() * 80 + 30, 24]
+                                            : 8,
+                                        backgroundColor: status === 'playing' ? '#A78BFA' : '#4B5563'
+                                    }}
+                                    transition={{
+                                        duration: 0.6,
+                                        repeat: Infinity,
+                                        repeatType: "mirror",
+                                        delay: i * 0.05,
+                                        ease: "easeInOut"
+                                    }}
+                                    className="w-3 rounded-full opacity-90"
+                                />
+                            ))}
+                        </div>
+                    </Card>
+                </div>
             </div>
 
             {/* Info */}
-            <div className="space-y-2 text-center mb-8">
-                <h1 className="text-2xl font-bold text-white line-clamp-2">
+            <div className="space-y-2 text-center mb-10">
+                <motion.h1
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-2xl font-bold text-white line-clamp-2 leading-tight"
+                >
                     {currentModule?.title || "Carregando..."}
-                </h1>
-                <p className="text-neural-400 text-sm">Módulo de Aprendizagem</p>
+                </motion.h1>
+                <p className="text-neural-400 text-sm font-medium tracking-wide uppercase">Módulo de Aprendizagem</p>
             </div>
 
             {/* Controls */}
-            <div className="space-y-6">
+            <div className="space-y-8">
                 {/* Progress */}
-                <div className="space-y-2">
-                    <ProgressBar progress={(currentTime / (duration || 1)) * 100} className="h-1.5" />
-                    <div className="flex justify-between text-xs text-neural-500 font-mono">
+                <div className="space-y-3 group">
+                    <ProgressBar progress={(currentTime / (duration || 1)) * 100} className="h-2 rounded-full bg-neural-800" />
+                    <div className="flex justify-between text-xs text-neural-500 font-mono group-hover:text-neural-300 transition-colors">
                         <span>{formatTime(currentTime)}</span>
                         <span>{formatTime(duration)}</span>
                     </div>
                 </div>
 
                 {/* Buttons */}
-                <div className="flex items-center justify-between">
-                    <Button variant="ghost" size="sm" onClick={changeSpeed} className="text-xs font-mono w-12">
+                <div className="flex items-center justify-between px-4">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={changeSpeed}
+                        className="text-xs font-bold text-neural-400 hover:text-white w-12 h-12 rounded-full hover:bg-neural-800 transition-all"
+                    >
                         {speed}x
                     </Button>
 
-                    <div className="flex items-center gap-4">
-                        <Button variant="ghost" size="sm" onClick={() => seek(currentTime - 15)}>
-                            <SkipBack className="w-6 h-6" />
+                    <div className="flex items-center gap-6">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => seek(currentTime - 15)}
+                            className="text-neural-400 hover:text-white hover:bg-transparent hover:scale-110 transition-all p-2 h-auto"
+                        >
+                            <SkipBack className="w-8 h-8" />
                         </Button>
 
-                        <button
+                        <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.95 }}
                             onClick={status === 'playing' ? pause : play}
-                            className="h-16 w-16 rounded-full bg-white text-neural-900 flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-lg shadow-white/10"
+                            className="h-20 w-20 rounded-full bg-white text-neural-900 flex items-center justify-center shadow-[0_0_40px_-10px_rgba(255,255,255,0.3)] hover:shadow-[0_0_60px_-10px_rgba(255,255,255,0.5)] transition-shadow"
                         >
-                            {status === 'playing' ? (
-                                <Pause className="w-8 h-8 fill-current" />
-                            ) : (
-                                <Play className="w-8 h-8 fill-current ml-1" />
-                            )}
-                        </button>
+                            <AnimatePresence mode="wait">
+                                {status === 'playing' ? (
+                                    <motion.div
+                                        key="pause"
+                                        initial={{ opacity: 0, scale: 0.5 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        exit={{ opacity: 0, scale: 0.5 }}
+                                    >
+                                        <Pause className="w-8 h-8 fill-current" />
+                                    </motion.div>
+                                ) : (
+                                    <motion.div
+                                        key="play"
+                                        initial={{ opacity: 0, scale: 0.5 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        exit={{ opacity: 0, scale: 0.5 }}
+                                    >
+                                        <Play className="w-8 h-8 fill-current ml-1" />
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </motion.button>
 
-                        <Button variant="ghost" size="sm" onClick={() => seek(currentTime + 15)}>
-                            <SkipForward className="w-6 h-6" />
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => seek(currentTime + 15)}
+                            className="text-neural-400 hover:text-white hover:bg-transparent hover:scale-110 transition-all p-2 h-auto"
+                        >
+                            <SkipForward className="w-8 h-8" />
                         </Button>
                     </div>
 
-                    <Button variant="ghost" size="sm" className="w-12 opacity-0 pointer-events-none">
-                        {/* Spacer */}
-                    </Button>
+                    <div className="w-12" /> {/* Spacer for balance */}
                 </div>
             </div>
         </div>

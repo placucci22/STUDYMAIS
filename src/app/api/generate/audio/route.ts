@@ -27,11 +27,12 @@ export async function POST(req: NextRequest) {
 
         const request = {
             input: { text: text },
-            voice: { languageCode: 'pt-BR', name: 'pt-BR-Neural2-C' }, // 'C' is often deeper and more natural than 'B'
+            voice: { languageCode: 'pt-BR', name: 'pt-BR-Neural2-C' }, // Deep, authoritative, yet natural
             audioConfig: {
                 audioEncoding: 'MP3' as const,
-                speakingRate: 1.1, // Slightly faster to sound more conversational
-                pitch: -1.0 // Slightly deeper
+                speakingRate: 1.15, // Dynamic, conversational pace
+                pitch: -2.0, // Deeper, more "FM Radio" resonance
+                effectsProfileId: ['headphone-class-device'], // Optimize for headphones
             },
         };
 
