@@ -21,7 +21,7 @@ export type StudyMaterial = {
     id: string;
     subject: string;
     type: 'pdf' | 'image' | 'link' | 'text';
-    source: 'upload' | 'manual';
+    source: 'upload' | 'manual' | 'link' | 'text';
     title?: string;
     url?: string;
     notes?: string;
