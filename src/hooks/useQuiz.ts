@@ -34,7 +34,7 @@ export function useQuiz() {
 
             const result = await generate_quiz({ script_text: scriptText });
 
-            if (result.error) throw new Error(result.message);
+
 
             setQuestions(result.questions);
             setStatus('active');
