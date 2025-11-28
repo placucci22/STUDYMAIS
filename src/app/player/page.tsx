@@ -17,12 +17,15 @@ export default function PlayerPage() {
     const { library } = useApp();
     const router = useRouter();
 
-    // Auto-play latest in-progress if idle
+    // Auto-play latest item (new or in-progress)
     useEffect(() => {
         if (status === 'idle' && !currentModule && library.length > 0) {
-            const lastPlayed = library.filter(m => m.status === 'in_progress').sort((a, b) => b.last_accessed - a.last_accessed)[0] || library[0];
-            if (lastPlayed) {
-                generateAndPlay(lastPlayed);
+            // Sort by last_accessed to get the very latest interaction (upload or play)
+            const latest = [...library].sort((a, b) => b.last_accessed - a.last_accessed)[0];
+
+            if (latest) {
+                console.log("Auto-playing material:", latest.title, "Has Text:", !!latest.raw_text);
+                generateAndPlay(latest);
             }
         }
     }, [status, currentModule, library]);
