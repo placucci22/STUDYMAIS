@@ -14,6 +14,7 @@ export interface Material {
     last_accessed: number;
     is_favorite: boolean;
     modules_count: number;
+    raw_text?: string;
 }
 
 interface AppContextType {

@@ -69,7 +69,8 @@ export function useUpload() {
                 status: 'new' as const,
                 last_accessed: Date.now(),
                 is_favorite: false,
-                modules_count: result.chapters.length
+                modules_count: result.chapters.length,
+                raw_text: result.raw_text
             };
 
             setUploadedMaterial(newMaterial);

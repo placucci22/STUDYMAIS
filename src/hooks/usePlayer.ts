@@ -62,7 +62,8 @@ export function usePlayer() {
             // 1. Generate Script
             const scriptResult = await generate_script({
                 module_title: module.title,
-                module_context: "Web Context"
+                module_context: "Web Context",
+                raw_text: module.raw_text
             });
 
 
