@@ -43,7 +43,7 @@ export default function ProfileSetupPage() {
                     category: formData.category,
                     course_area: formData.course_area,
                     main_goal: formData.main_goal,
-                    updated_at: new Date().toISOString(),
+                    // updated_at: new Date().toISOString(), // Column might be missing in DB
                 });
 
             if (error) throw error;
