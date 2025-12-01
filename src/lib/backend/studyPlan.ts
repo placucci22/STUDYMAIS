@@ -1,37 +1,36 @@
 import { StudyPlanDraft, StudyPlan, Lesson } from "@/context/AppContext";
 
 export async function generateStudyPlan(draft: StudyPlanDraft): Promise<StudyPlan> {
-    // Simulate processing time
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    const lessons: Lesson[] = [];
-    let lessonIdCounter = 1;
-
-    // For each subject, generate 1 initial lesson
-    for (const subject of draft.subjects) {
-        // In a real implementation, we would:
-        // 1. Gather all text from materials (PDFs, links, notes)
-        // 2. Send to Gemini to generate a curriculum
-        // 3. Create lessons based on that curriculum
-
-        lessons.push({
-            id: `lesson_${Date.now()}_${lessonIdCounter++}`,
-            subject: subject,
-            title: `Fundamentos de ${subject}`,
-            description: `Uma introdução abrangente aos conceitos chave de ${subject}, baseada nos seus materiais.`,
-            order: lessons.length,
-            status: lessons.length === 0 ? 'unlocked' : 'locked', // Unlock first lesson
-            // audioUrl: ... (would be generated later or on demand)
-            // quizId: ...
+    try {
+        const response = await fetch('/api/generate/plan', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(draft),
         });
-    }
 
-    return {
-        id: Date.now().toString(),
-        goal: draft.goal,
-        subjects: draft.subjects,
-        lessons: lessons,
-        active: true,
-        title: `Plano de Estudos: ${draft.goal.charAt(0).toUpperCase() + draft.goal.slice(1)}`
-    };
+        if (!response.ok) {
+            throw new Error('Failed to generate plan via API');
+        }
+
+        const data = await response.json();
+
+        return {
+            id: Date.now().toString(),
+            goal: draft.goal,
+            subjects: draft.subjects,
+            lessons: data.lessons.map((l: any, i: number) => ({
+                ...l,
+                id: `lesson-${Date.now()}-${i}`,
+                status: i === 0 ? 'unlocked' : 'locked'
+            })),
+            schedule: data.schedule,
+            active: true,
+            title: `Plano: ${draft.goal.slice(0, 30)}...`
+        };
+    } catch (error) {
+        console.error("Error in generateStudyPlan:", error);
+        throw error;
+    }
 }
