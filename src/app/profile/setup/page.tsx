@@ -64,7 +64,7 @@ export default function ProfileSetupPage() {
             router.refresh(); // Ensure middleware re-runs or context updates
         } catch (error) {
             console.error('Error saving profile:', error);
-            alert('Erro ao salvar perfil. Tente novamente.');
+            alert(`Erro ao salvar perfil: ${(error as any).message || JSON.stringify(error)}`);
         } finally {
             setIsLoading(false);
         }
