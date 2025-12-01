@@ -192,7 +192,11 @@ function SetupContent() {
             // We should modify signInWithGoogle to accept a redirect URL or handle it in callback.
             // For now, let's assume the user manually returns or we use a sophisticated auth flow.
             // A simple way:
-            signInWithGoogle('/setup?action=restore'); // This redirects away.
+            const { error } = await signInWithGoogle('/setup?action=restore');
+            if (error) {
+                console.error("Login error:", error);
+                alert("Erro ao iniciar login. Verifique o console para mais detalhes.");
+            }
             return;
         }
 
