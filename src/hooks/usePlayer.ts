@@ -2,18 +2,24 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { generate_script, generate_audio, track_event } from '@/lib/backend/actions';
-import { useApp, Material } from '@/context/AppContext';
+import { useAppContext, LibraryItem } from '@/context/AppContext';
 
 export function usePlayer() {
     const [status, setStatus] = useState<'idle' | 'generating_script' | 'generating_audio' | 'ready' | 'playing' | 'paused' | 'error'>('idle');
-    const [currentModule, setCurrentModule] = useState<Material | null>(null);
+    const [currentModule, setCurrentModule] = useState<LibraryItem | null>(null);
     const [audioData, setAudioData] = useState<{ url: string; duration: number; script: string } | null>(null);
     const [currentTime, setCurrentTime] = useState(0);
     const [speed, setSpeed] = useState(1.0);
     const [error, setError] = useState<string | null>(null);
 
+    // Audio element state
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [duration, setDuration] = useState(0);
+    const [volume, setVolume] = useState(1);
+    const [isMuted, setIsMuted] = useState(false);
+
     const audioRef = useRef<HTMLAudioElement | null>(null);
-    const { updateProgress } = useApp();
+    const { updateProgress } = useAppContext();
 
     // Initialize Audio Element
     useEffect(() => {
@@ -45,7 +51,7 @@ export function usePlayer() {
         }
     }, [speed]);
 
-    const generateAndPlay = async (module: Material) => {
+    const generateAndPlay = async (module: LibraryItem) => {
         try {
             setCurrentModule(module);
 
@@ -63,7 +69,7 @@ export function usePlayer() {
             const scriptResult = await generate_script({
                 module_title: module.title,
                 module_context: "Web Context",
-                raw_text: module.raw_text
+                raw_text: module.rawText
             });
 
 

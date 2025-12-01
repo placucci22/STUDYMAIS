@@ -1,12 +1,12 @@
 "use client";
 
 import { usePlayer } from "@/hooks/usePlayer";
-import { useApp } from "@/context/AppContext";
 import { Card, Button, ProgressBar } from "@/components/ui";
 import { Play, Pause, SkipBack, SkipForward, FastForward, Loader2, AlertCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAppContext } from "@/context/AppContext";
 
 export default function PlayerPage() {
     const {
@@ -14,7 +14,7 @@ export default function PlayerPage() {
         generateAndPlay, play, pause, seek, changeSpeed
     } = usePlayer();
 
-    const { library } = useApp();
+    const { library } = useAppContext();
     const router = useRouter();
 
     const [showLyrics, setShowLyrics] = useState(false);
@@ -25,11 +25,11 @@ export default function PlayerPage() {
     const [currentLineIndex, setCurrentLineIndex] = useState(0);
 
     useEffect(() => {
-        if (currentModule?.raw_text) {
+        if (currentModule?.rawText) {
             // Simple heuristic: 15 chars per second roughly
-            const lines = currentModule.raw_text.split(/(?<=[.!?])\s+/).filter(l => l.length > 0);
+            const lines = currentModule.rawText.split(/(?<=[.!?])\s+/).filter((l: string) => l.length > 0);
             let accumulatedTime = 0;
-            const parsedLyrics = lines.map(line => {
+            const parsedLyrics = lines.map((line: string) => {
                 const duration = Math.max(2, line.length * 0.06); // Estimate duration
                 const item = { text: line, startTime: accumulatedTime };
                 accumulatedTime += duration;
@@ -72,11 +72,11 @@ export default function PlayerPage() {
     // Auto-play latest item (new or in-progress)
     useEffect(() => {
         if (status === 'idle' && !currentModule && library.length > 0) {
-            // Sort by last_accessed to get the very latest interaction (upload or play)
-            const latest = [...library].sort((a, b) => b.last_accessed - a.last_accessed)[0];
+            // Sort by lastAccessed to get the very latest interaction (upload or play)
+            const latest = [...library].sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0))[0];
 
             if (latest) {
-                console.log("Auto-playing material:", latest.title, "Has Text:", !!latest.raw_text);
+                console.log("Auto-playing material:", latest.title, "Has Text:", !!latest.rawText);
                 generateAndPlay(latest);
             }
         }

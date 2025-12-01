@@ -1,8 +1,6 @@
-"use client";
-
 import { useState } from 'react';
 import { analyze_pdf, track_event } from '@/lib/backend/actions';
-import { useApp } from '@/context/AppContext';
+import { useAppContext, LibraryItem } from '@/context/AppContext';
 import { supabase } from '@/lib/supabase';
 
 export function useUpload() {
@@ -11,7 +9,7 @@ export function useUpload() {
     const [error, setError] = useState<string | null>(null);
     const [uploadedMaterial, setUploadedMaterial] = useState<any>(null);
 
-    const { addToLibrary } = useApp();
+    const { addToLibrary } = useAppContext();
 
     const reset = () => {
         setStatus('idle');
@@ -72,20 +70,23 @@ export function useUpload() {
             const result = await analyze_pdf(publicUrl, file.name.replace('.pdf', ''));
 
             // Success
-            const newMaterial = {
-                id: Date.now(),
-                title: result.title,
-                cover_color: "#8B5CF6", // Default Neural Violet
+            const text = result.raw_text; // Assuming 'text' refers to result.raw_text
+            const newMaterial: LibraryItem = {
+                id: Date.now().toString(),
+                title: file.name,
+                type: 'pdf',
+                url: publicUrl,
+                coverColor: 'from-blue-500 to-cyan-500',
                 progress: 0,
-                status: 'new' as const,
-                last_accessed: Date.now(),
-                is_favorite: false,
-                modules_count: result.chapters.length,
-                raw_text: result.raw_text
+                status: 'new',
+                lastAccessed: Date.now(),
+                isFavorite: false,
+                modulesCount: 0,
+                rawText: text
             };
 
-            setUploadedMaterial(newMaterial);
             addToLibrary(newMaterial);
+            setUploadedMaterial(newMaterial);
             setStatus('success');
 
         } catch (err: any) {

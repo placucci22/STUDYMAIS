@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from 'react';
-import { useApp, PlanType } from '@/context/AppContext';
+import { useAppContext, PlanType } from '@/context/AppContext';
 import { track_event } from '@/lib/backend/actions';
 
 export function usePaywall() {
-    const { userPlan, setUserPlan } = useApp();
+    const { userPlan, setUserPlan } = useAppContext();
     // TEMPORARY: Paywall disabled for testing
     const hasAccess = true;
     // const hasAccess = userPlan === 'pro' || userPlan === 'lifetime';

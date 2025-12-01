@@ -2,208 +2,292 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
+import { supabase } from '@/lib/supabase';
 
-// --- TYPES ---
-export type PlanType = 'free' | 'premium' | 'pro';
+export type PlanType = 'free' | 'pro' | 'premium';
 
-export interface Material {
-    id: number;
-    title: string;
-    cover_color: string;
-    progress: number;
-    status: 'new' | 'in_progress' | 'completed';
-    last_accessed: number;
-    is_favorite: boolean;
-    modules_count: number;
-    raw_text?: string;
+export interface StudyMaterial {
+    id: string;
+    name: string;
+    type: 'pdf' | 'video' | 'link' | 'text';
+    file?: File;
+    url?: string;
+    content?: string;
 }
 
-export type StudyMaterial = {
+export interface LibraryItem {
     id: string;
-    subject: string;
-    type: 'pdf' | 'image' | 'link' | 'text';
-    source: 'upload' | 'manual' | 'link' | 'text';
-    title?: string;
+    title: string;
+    type: string;
+    duration?: string;
+    progress: number;
+    isFavorite: boolean;
     url?: string;
-    notes?: string;
-};
+    thumbnail?: string;
+    // Extended properties
+    coverColor?: string;
+    status?: 'new' | 'in_progress' | 'completed' | 'locked' | 'unlocked';
+    modulesCount?: number;
+    lastAccessed?: number;
+    rawText?: string;
+}
 
-export type StudyPlanDraft = {
-    goal: string;
-    subjects: string[];
-    materials: StudyMaterial[];
-};
-
-export type Lesson = {
+export interface Lesson {
     id: string;
     subject: string;
     title: string;
-    description?: string;
-    audioUrl?: string;
-    quizId?: string;
+    description: string;
     order: number;
-    status: 'locked' | 'unlocked' | 'in_progress' | 'completed';
-};
+    status: 'locked' | 'unlocked' | 'completed' | 'in_progress';
+    audioUrl?: string;
+}
 
-export type StudyPlan = {
+export interface StudyPlanDraft {
+    goal: string;
+    subjects: string[];
+}
+
+export interface StudyPlan {
     id: string;
     goal: string;
     subjects: string[];
     lessons: Lesson[];
     active: boolean;
-    title?: string;
-};
+    title: string;
+    schedule?: any[];
+}
 
 interface AppContextType {
     userPlan: PlanType;
     setUserPlan: (plan: PlanType) => void;
-    studyPlan: StudyPlan | null;
-    setStudyPlan: (plan: StudyPlan | null) => void;
-    library: Material[];
-    addToLibrary: (material: Material) => void;
-    updateProgress: (id: number, progress: number) => void;
-    toggleFavorite: (id: number) => void;
+    library: LibraryItem[];
+    addToLibrary: (item: LibraryItem) => void;
+    updateProgress: (itemId: string, progress: number) => void;
+    toggleFavorite: (itemId: string) => void;
     isLoading: boolean;
+    // Draft State
+    objective: string;
+    setObjective: (obj: string) => void;
+    objectiveType: 'general' | 'exam' | 'skill';
+    setObjectiveType: (type: 'general' | 'exam' | 'skill') => void;
+    subjects: string[];
+    setSubjects: (subjects: string[]) => void;
+    materials: StudyMaterial[];
+    setMaterials: (materials: StudyMaterial[]) => void;
+    generatedPlan: any;
+    setGeneratedPlan: (plan: any) => void;
+    // Persistence
+    saveDraftPlan: () => void;
+    restoreDraftPlan: () => boolean;
+    clearDraftPlan: () => void;
 }
 
-// --- MOCK DATA ---
-const MOCK_LIBRARY: Material[] = [
-    {
-        id: 101,
-        title: "Introdução à Neurociência",
-        cover_color: "#8B5CF6",
-        progress: 45,
-        status: 'in_progress',
-        last_accessed: Date.now() - 100000,
-        is_favorite: true,
-        modules_count: 3
-    },
-    {
-        id: 102,
-        title: "Direito Constitucional",
-        cover_color: "#3B82F6",
-        progress: 100,
-        status: 'completed',
-        last_accessed: Date.now() - 86400000,
-        is_favorite: false,
-        modules_count: 5
-    }
-];
-
-// --- CONTEXT ---
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
     const { user } = useAuth();
     const [userPlan, setUserPlan] = useState<PlanType>('free');
-    const [library, setLibrary] = useState<Material[]>([]);
+    const [library, setLibrary] = useState<LibraryItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    const [studyPlan, setStudyPlan] = useState<StudyPlan | null>(null);
+    // Draft State
+    const [objective, setObjective] = useState('');
+    const [objectiveType, setObjectiveType] = useState<'general' | 'exam' | 'skill'>('general');
+    const [subjects, setSubjects] = useState<string[]>([]);
+    const [materials, setMaterials] = useState<StudyMaterial[]>([]);
+    const [generatedPlan, setGeneratedPlan] = useState<any>(null);
 
     // Load Data when User Changes
     useEffect(() => {
-        const loadData = async () => {
+        const loadUserData = async () => {
             if (!user) {
                 setLibrary([]);
-                setStudyPlan(null);
                 setIsLoading(false);
                 return;
             }
 
-            setIsLoading(true);
-            // Simulate fetch
-            await new Promise(r => setTimeout(r, 500));
+            try {
+                // Load Library
+                const { data: libraryData } = await supabase
+                    .from('library')
+                    .select('*')
+                    .eq('user_id', user.id);
 
-            // Try local storage with user-specific keys
-            const savedLib = localStorage.getItem(`cognitive_library_${user.id}`);
-            if (savedLib) {
-                setLibrary(JSON.parse(savedLib));
-            } else {
-                setLibrary(MOCK_LIBRARY); // Default for new users for now
+                if (libraryData) {
+                    setLibrary(libraryData.map(item => ({
+                        id: item.id,
+                        title: item.title,
+                        type: item.type,
+                        duration: item.duration || '0 min',
+                        progress: item.progress || 0,
+                        isFavorite: item.is_favorite || false,
+                        url: item.url,
+                        thumbnail: item.thumbnail
+                    })));
+                }
+
+                // Load User Plan (Subscription)
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('plan_type')
+                    .eq('id', user.id)
+                    .single();
+
+                if (profile) {
+                    setUserPlan(profile.plan_type as PlanType);
+                }
+
+            } catch (error) {
+                console.error('Error loading user data:', error);
+            } finally {
+                setIsLoading(false);
             }
-
-            const savedPlan = localStorage.getItem(`cognitive_plan_${user.id}`);
-            if (savedPlan) setUserPlan(savedPlan as PlanType);
-
-            const savedStudyPlan = localStorage.getItem(`cognitive_study_plan_${user.id}`);
-            if (savedStudyPlan) setStudyPlan(JSON.parse(savedStudyPlan));
-
-            setIsLoading(false);
         };
-        loadData();
+
+        loadUserData();
     }, [user]);
 
-    // Persist Library Changes
-    useEffect(() => {
-        if (!isLoading && user) {
-            localStorage.setItem(`cognitive_library_${user.id}`, JSON.stringify(library));
-        }
-    }, [library, isLoading, user]);
+    const addToLibrary = async (item: LibraryItem) => {
+        if (!user) return;
 
-    // Persist Plan Changes
-    useEffect(() => {
-        if (!isLoading && user) {
-            localStorage.setItem(`cognitive_plan_${user.id}`, userPlan);
-        }
-    }, [userPlan, isLoading, user]);
+        try {
+            const { data, error } = await supabase
+                .from('library')
+                .insert({
+                    user_id: user.id,
+                    title: item.title,
+                    type: item.type,
+                    url: item.url,
+                    thumbnail: item.thumbnail,
+                    duration: item.duration,
+                    progress: 0,
+                    is_favorite: false
+                })
+                .select()
+                .single();
 
-    // Persist Study Plan Changes
-    useEffect(() => {
-        if (!isLoading && user) {
-            if (studyPlan) {
-                localStorage.setItem(`cognitive_study_plan_${user.id}`, JSON.stringify(studyPlan));
-            } else {
-                localStorage.removeItem(`cognitive_study_plan_${user.id}`);
-            }
-        }
-    }, [studyPlan, isLoading, user]);
+            if (error) throw error;
 
-    const addToLibrary = (material: Material) => {
-        setLibrary(prev => [material, ...prev]);
+            setLibrary(prev => [...prev, {
+                id: data.id,
+                title: data.title,
+                type: data.type,
+                duration: data.duration,
+                progress: 0,
+                isFavorite: false,
+                url: data.url,
+                thumbnail: data.thumbnail
+            }]);
+        } catch (error) {
+            console.error('Error adding to library:', error);
+        }
     };
 
-    const updateProgress = (id: number, progress: number) => {
-        setLibrary(prev => prev.map(m => {
-            if (m.id === id) {
-                return {
-                    ...m,
-                    progress,
-                    status: progress >= 100 ? 'completed' : 'in_progress',
-                    last_accessed: Date.now()
-                };
-            }
-            return m;
-        }));
-    };
+    const updateProgress = async (itemId: string, progress: number) => {
+        if (!user) return;
 
-    const toggleFavorite = (id: number) => {
-        setLibrary(prev => prev.map(m =>
-            m.id === id ? { ...m, is_favorite: !m.is_favorite } : m
+        setLibrary(prev => prev.map(item =>
+            item.id === itemId ? { ...item, progress } : item
         ));
+
+        try {
+            await supabase
+                .from('library')
+                .update({ progress })
+                .eq('id', itemId);
+        } catch (error) {
+            console.error('Error updating progress:', error);
+        }
+    };
+
+    const toggleFavorite = async (itemId: string) => {
+        if (!user) return;
+
+        const item = library.find(i => i.id === itemId);
+        if (!item) return;
+
+        const newStatus = !item.isFavorite;
+
+        setLibrary(prev => prev.map(i =>
+            i.id === itemId ? { ...i, isFavorite: newStatus } : i
+        ));
+
+        try {
+            await supabase
+                .from('library')
+                .update({ is_favorite: newStatus })
+                .eq('id', itemId);
+        } catch (error) {
+            console.error('Error toggling favorite:', error);
+        }
+    };
+
+    const saveDraftPlan = () => {
+        if (typeof window === 'undefined') return;
+        const draft = {
+            objective,
+            objectiveType,
+            subjects,
+            materials
+        };
+        localStorage.setItem('study_plan_draft', JSON.stringify(draft));
+    };
+
+    const restoreDraftPlan = () => {
+        if (typeof window === 'undefined') return false;
+        const draftStr = localStorage.getItem('study_plan_draft');
+        if (!draftStr) return false;
+
+        try {
+            const draft = JSON.parse(draftStr);
+            setObjective(draft.objective || '');
+            setObjectiveType(draft.objectiveType || 'general');
+            setSubjects(draft.subjects || []);
+            setMaterials(draft.materials || []);
+            return true;
+        } catch (e) {
+            console.error('Failed to restore draft plan', e);
+            return false;
+        }
+    };
+
+    const clearDraftPlan = () => {
+        if (typeof window === 'undefined') return;
+        localStorage.removeItem('study_plan_draft');
     };
 
     return (
         <AppContext.Provider value={{
             userPlan,
             setUserPlan,
-            studyPlan,
-            setStudyPlan,
             library,
             addToLibrary,
             updateProgress,
             toggleFavorite,
-            isLoading
+            isLoading,
+            objective,
+            setObjective,
+            objectiveType,
+            setObjectiveType,
+            subjects,
+            setSubjects,
+            materials,
+            setMaterials,
+            generatedPlan,
+            setGeneratedPlan,
+            saveDraftPlan,
+            restoreDraftPlan,
+            clearDraftPlan
         }}>
             {children}
         </AppContext.Provider>
     );
 }
 
-export function useApp() {
+export function useAppContext() {
     const context = useContext(AppContext);
     if (context === undefined) {
-        throw new Error('useApp must be used within an AppProvider');
+        throw new Error('useAppContext must be used within an AppProvider');
     }
     return context;
 }

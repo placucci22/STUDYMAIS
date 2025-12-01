@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { Card, Button, ProgressBar } from '@/components/ui';
 import { ArrowRight, ArrowLeft, Upload, Link as LinkIcon, FileText, Loader2, Sparkles, Book, CheckCircle2, Target, BrainCircuit, Library } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useApp, StudyPlanDraft, StudyMaterial } from '@/context/AppContext';
-import { useRouter } from 'next/navigation';
+import { useAppContext, StudyMaterial } from '@/context/AppContext';
+import { useAuth } from '@/context/AuthContext';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { generateStudyPlan } from '@/lib/backend/studyPlan';
 
@@ -29,40 +30,85 @@ const SUBJECT_CHIPS = [
     "Exatas", "Humanas", "Saúde", "Direito", "Tecnologia", "Concursos", "Educação"
 ];
 
-export default function SetupPage() {
-    const { setStudyPlan } = useApp();
+// Define Draft Type locally if not exported
+interface StudyPlanDraft {
+    goal: string;
+    subjects: string[];
+    materials: StudyMaterial[];
+}
+
+function SetupContent() {
+    const {
+        saveDraftPlan,
+        restoreDraftPlan,
+        clearDraftPlan,
+        // Context State
+        objective, setObjective,
+        objectiveType, setObjectiveType,
+        subjects, setSubjects,
+        materials, setMaterials,
+        setGeneratedPlan
+    } = useAppContext();
+
+    const { user, signInWithGoogle } = useAuth();
     const router = useRouter();
+    const searchParams = useSearchParams();
 
     const [step, setStep] = useState(1);
     const [isGenerating, setIsGenerating] = useState(false);
 
-    // --- STATE ---
-    const [objectiveType, setObjectiveType] = useState<string | null>(null);
-    const [objectiveText, setObjectiveText] = useState("");
-
+    // Local UI state (derived or temporary)
     const [subjectsText, setSubjectsText] = useState("");
     const [selectedChips, setSelectedChips] = useState<string[]>([]);
-
     const [subjectDetails, setSubjectDetails] = useState<Record<string, string>>({});
-    const [parsedSubjects, setParsedSubjects] = useState<string[]>([]);
 
-    const [materials, setMaterials] = useState<StudyMaterial[]>([]);
     const [isUploading, setIsUploading] = useState(false);
     const [showLinkInput, setShowLinkInput] = useState(false);
     const [linkUrl, setLinkUrl] = useState("");
     const [showBookInput, setShowBookInput] = useState(false);
     const [bookText, setBookText] = useState("");
 
+    // --- EFFECTS ---
+
+    // 1. Check for 'action=restore' param on mount
+    useEffect(() => {
+        const action = searchParams.get('action');
+        if (action === 'restore') {
+            const restored = restoreDraftPlan();
+            if (restored) {
+                // If restored successfully, we should be ready to generate
+                // But we need to make sure state is updated.
+                // Let's jump to the last step or trigger generation?
+                // For now, let's just go to step 5 (Generation)
+                setStep(5);
+                // Auto-trigger generation?
+                // handleGenerate(); // Might be risky if state isn't ready
+            }
+        }
+    }, [searchParams, restoreDraftPlan]);
+
+    // 2. Auto-trigger generation if we are at step 5 and authenticated
+    useEffect(() => {
+        if (step === 5 && user && !isGenerating) {
+            handleGenerate();
+        }
+    }, [step, user, isGenerating]);
+
+    // Sync local subjects text/chips to context subjects
+    useEffect(() => {
+        // Simple heuristic parsing for subjects
+        const raw = subjectsText.split(/,|\n| e /).map(s => s.trim()).filter(s => s.length > 2);
+        const combined = Array.from(new Set([...raw, ...selectedChips]));
+        // We don't auto-set context here to avoid loop, only on Next
+    }, [subjectsText, selectedChips]);
+
     // --- HANDLERS ---
 
     const handleNext = () => {
         if (step === 2) {
-            // Simple heuristic parsing for subjects to generate Step 3 tabs
-            // Split by comma, newline, or " e "
             const raw = subjectsText.split(/,|\n| e /).map(s => s.trim()).filter(s => s.length > 2);
-            // Add chips
             const combined = Array.from(new Set([...raw, ...selectedChips]));
-            setParsedSubjects(combined.length > 0 ? combined : ["Geral"]);
+            setSubjects(combined.length > 0 ? combined : ["Geral"]);
         }
         setStep(prev => prev + 1);
     };
@@ -94,13 +140,11 @@ export default function SetupPage() {
                 .from('documents')
                 .getPublicUrl(fileName);
 
-            setMaterials(prev => [...prev, {
+            setMaterials([...materials, {
                 id: Date.now().toString(),
-                subject: "Geral", // We assign to general for now
+                name: file.name,
                 type: 'pdf',
-                title: file.name,
-                url: publicUrl,
-                source: 'upload'
+                url: publicUrl
             }]);
         } catch (error) {
             console.error("Upload failed", error);
@@ -112,13 +156,11 @@ export default function SetupPage() {
 
     const addLink = () => {
         if (!linkUrl) return;
-        setMaterials(prev => [...prev, {
+        setMaterials([...materials, {
             id: Date.now().toString(),
-            subject: "Geral",
+            name: linkUrl,
             type: 'link',
-            title: linkUrl,
-            url: linkUrl,
-            source: 'link'
+            url: linkUrl
         }]);
         setLinkUrl("");
         setShowLinkInput(false);
@@ -126,30 +168,43 @@ export default function SetupPage() {
 
     const addBook = () => {
         if (!bookText) return;
-        setMaterials(prev => [...prev, {
+        setMaterials([...materials, {
             id: Date.now().toString(),
-            subject: "Geral",
+            name: bookText.slice(0, 30) + "...",
             type: 'text',
-            title: bookText.slice(0, 30) + "...",
-            notes: bookText,
-            source: 'text'
+            content: bookText
         }]);
         setBookText("");
         setShowBookInput(false);
     };
 
     const handleGenerate = async () => {
+        // 1. Check Authentication
+        if (!user) {
+            // Save Draft
+            saveDraftPlan();
+            // Redirect to Login
+            // The AuthContext/Google Login flow should handle the redirect back to origin/callback
+            // But we need to ensure the callback redirects eventually to /setup?action=restore
+
+            // Since we are using Supabase Auth with a callback route, we can pass `next` param?
+            // Our current signInWithGoogle implementation hardcodes the redirect to /auth/callback.
+            // We should modify signInWithGoogle to accept a redirect URL or handle it in callback.
+            // For now, let's assume the user manually returns or we use a sophisticated auth flow.
+            // A simple way:
+            signInWithGoogle('/setup?action=restore'); // This redirects away.
+            return;
+        }
+
         setIsGenerating(true);
         try {
-            // Construct Draft
+            // Prepare Draft Object
             const draft: StudyPlanDraft = {
-                goal: `${objectiveType ? objectiveType + ": " : ""}${objectiveText}`,
-                subjects: parsedSubjects,
+                goal: objectiveType === 'general' ? objective : `${objectiveType}: ${objective}`,
+                subjects: subjects,
                 materials: materials
             };
 
-            // We pass details as context in the draft (we might need to update the type or just append to goal)
-            // For now, let's append details to the goal/context for the backend to process
             const detailsContext = Object.entries(subjectDetails)
                 .map(([subj, det]) => `${subj}: ${det}`)
                 .join("\n");
@@ -157,7 +212,11 @@ export default function SetupPage() {
             draft.goal += `\n\nDetalhes:\n${detailsContext}`;
 
             const newPlan = await generateStudyPlan(draft);
-            setStudyPlan(newPlan);
+            setGeneratedPlan(newPlan);
+
+            // Clear draft after successful generation
+            clearDraftPlan();
+
             router.push('/');
         } catch (error) {
             console.error("Failed to generate plan", error);
@@ -180,11 +239,11 @@ export default function SetupPage() {
                 {OBJECTIVE_SUGGESTIONS.map(obj => (
                     <button
                         key={obj.id}
-                        onClick={() => setObjectiveType(obj.label)}
+                        onClick={() => setObjectiveType(obj.label as any)} // Cast to any to avoid strict type check for now
                         className={`
-                            p-4 rounded-xl border text-left transition-all flex flex-col gap-2
+                            p-4 rounded-xl border flex flex-col items-center gap-2 transition-all
                             ${objectiveType === obj.label
-                                ? 'bg-neural-600/20 border-neural-500 text-white shadow-[0_0_15px_rgba(139,92,246,0.2)]'
+                                ? 'bg-neural-600 border-neural-500 text-white shadow-[0_0_15px_rgba(139,92,246,0.2)]'
                                 : 'bg-void-800 border-neural-800 text-neural-400 hover:border-neural-600 hover:bg-void-800/80'}
                         `}
                     >
@@ -197,8 +256,8 @@ export default function SetupPage() {
             <div className="space-y-2">
                 <label className="text-sm font-medium text-neural-300">Descreva seu objetivo em detalhes</label>
                 <textarea
-                    value={objectiveText}
-                    onChange={(e) => setObjectiveText(e.target.value)}
+                    value={objective}
+                    onChange={(e) => setObjective(e.target.value)}
                     placeholder="Ex: Passar em Direito Constitucional básico, aprender Logaritmos, revisar Hist. Contemporânea..."
                     className="w-full h-32 bg-void-800 border border-neural-800 rounded-xl p-4 text-white placeholder:text-neural-600 focus:border-neural-500 focus:ring-1 focus:ring-neural-500 outline-none resize-none transition-all"
                 />
@@ -247,7 +306,7 @@ export default function SetupPage() {
             </div>
 
             <div className="space-y-6">
-                {parsedSubjects.map((subject, idx) => (
+                {subjects.map((subject, idx) => (
                     <div key={idx} className="space-y-2">
                         <h3 className="text-lg font-medium text-neural-200 flex items-center gap-2">
                             <div className="w-2 h-2 rounded-full bg-neural-500" />
@@ -277,23 +336,21 @@ export default function SetupPage() {
                 {materials.map(m => (
                     <div key={m.id} className="flex items-center justify-between p-3 rounded-xl bg-void-800 border border-neural-800">
                         <div className="flex items-center gap-3 overflow-hidden">
-                            <div className="h-10 w-10 rounded-lg bg-neural-900 flex items-center justify-center shrink-0">
-                                {m.type === 'pdf' ? <FileText className="w-5 h-5 text-neural-400" /> :
-                                    m.type === 'link' ? <LinkIcon className="w-5 h-5 text-neural-400" /> :
-                                        <Book className="w-5 h-5 text-neural-400" />}
+                            <div className="w-10 h-10 rounded-lg bg-neural-700 flex items-center justify-center shrink-0">
+                                {m.type === 'pdf' && <FileText className="w-5 h-5 text-blue-400" />}
+                                {m.type === 'link' && <LinkIcon className="w-5 h-5 text-green-400" />}
+                                {m.type === 'text' && <Book className="w-5 h-5 text-yellow-400" />}
                             </div>
-                            <div className="min-w-0">
-                                <p className="text-sm font-medium text-white truncate">{m.title}</p>
-                                <p className="text-xs text-neural-500 capitalize">{m.type}</p>
-                            </div>
+                            <span className="text-sm text-neural-200 truncate">{m.name}</span>
                         </div>
-                        <button
-                            onClick={() => setMaterials(prev => prev.filter(x => x.id !== m.id))}
-                            className="text-neural-500 hover:text-red-400 p-2"
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setMaterials(materials.filter(mat => mat.id !== m.id))}
+                            className="text-red-400 hover:text-red-300 hover:bg-red-400/10"
                         >
-                            <span className="sr-only">Remover</span>
-                            &times;
-                        </button>
+                            Remover
+                        </Button>
                     </div>
                 ))}
 
@@ -305,34 +362,32 @@ export default function SetupPage() {
                 )}
             </div>
 
-            {/* Actions */}
+            {/* Add Actions */}
             <div className="grid grid-cols-3 gap-3">
-                <div className="relative">
-                    <input
-                        type="file"
-                        accept=".pdf"
-                        onChange={handleFileUpload}
-                        className="absolute inset-0 opacity-0 cursor-pointer z-10"
-                        disabled={isUploading}
-                    />
-                    <Button variant="secondary" className="w-full h-full flex flex-col gap-1 py-4" disabled={isUploading}>
-                        {isUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
-                        <span className="text-xs">PDF</span>
-                    </Button>
-                </div>
+                <label className="cursor-pointer p-4 rounded-xl border border-dashed border-neural-700 hover:border-neural-500 hover:bg-neural-800/50 flex flex-col items-center gap-2 transition-all">
+                    <input type="file" accept=".pdf" className="hidden" onChange={handleFileUpload} disabled={isUploading} />
+                    {isUploading ? <Loader2 className="w-6 h-6 animate-spin text-neural-400" /> : <Upload className="w-6 h-6 text-neural-400" />}
+                    <span className="text-xs font-medium text-neural-400">Upload PDF</span>
+                </label>
 
-                <Button variant="secondary" className="w-full h-full flex flex-col gap-1 py-4" onClick={() => setShowLinkInput(true)}>
-                    <LinkIcon className="w-5 h-5" />
-                    <span className="text-xs">Link</span>
-                </Button>
+                <button
+                    onClick={() => setShowLinkInput(true)}
+                    className="p-4 rounded-xl border border-dashed border-neural-700 hover:border-neural-500 hover:bg-neural-800/50 flex flex-col items-center gap-2 transition-all"
+                >
+                    <LinkIcon className="w-6 h-6 text-neural-400" />
+                    <span className="text-xs font-medium text-neural-400">Link</span>
+                </button>
 
-                <Button variant="secondary" className="w-full h-full flex flex-col gap-1 py-4" onClick={() => setShowBookInput(true)}>
-                    <Book className="w-5 h-5" />
-                    <span className="text-xs">Livro/Texto</span>
-                </Button>
+                <button
+                    onClick={() => setShowBookInput(true)}
+                    className="p-4 rounded-xl border border-dashed border-neural-700 hover:border-neural-500 hover:bg-neural-800/50 flex flex-col items-center gap-2 transition-all"
+                >
+                    <Book className="w-6 h-6 text-neural-400" />
+                    <span className="text-xs font-medium text-neural-400">Livro/Texto</span>
+                </button>
             </div>
 
-            {/* Input Modals (Inline) */}
+            {/* Inputs */}
             <AnimatePresence>
                 {showLinkInput && (
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="p-4 bg-void-800 rounded-xl border border-neural-700 space-y-3">
@@ -341,10 +396,10 @@ export default function SetupPage() {
                             placeholder="Cole o link aqui..."
                             value={linkUrl}
                             onChange={e => setLinkUrl(e.target.value)}
-                            className="w-full bg-neural-900/50 border border-neural-700 rounded-lg p-2 text-sm text-white outline-none focus:border-neural-500"
+                            className="w-full bg-neural-900/50 border border-neural-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-neural-500"
                         />
                         <div className="flex justify-end gap-2">
-                            <Button size="sm" variant="ghost" onClick={() => setShowLinkInput(false)}>Cancelar</Button>
+                            <Button variant="ghost" size="sm" onClick={() => setShowLinkInput(false)}>Cancelar</Button>
                             <Button size="sm" onClick={addLink}>Adicionar</Button>
                         </div>
                     </motion.div>
@@ -355,10 +410,10 @@ export default function SetupPage() {
                             placeholder="Digite o nome do livro, capítulos ou cole um texto..."
                             value={bookText}
                             onChange={e => setBookText(e.target.value)}
-                            className="w-full h-24 bg-neural-900/50 border border-neural-700 rounded-lg p-2 text-sm text-white outline-none focus:border-neural-500 resize-none"
+                            className="w-full h-24 bg-neural-900/50 border border-neural-700 rounded-lg p-3 text-sm text-white outline-none focus:border-neural-500 resize-none"
                         />
                         <div className="flex justify-end gap-2">
-                            <Button size="sm" variant="ghost" onClick={() => setShowBookInput(false)}>Cancelar</Button>
+                            <Button variant="ghost" size="sm" onClick={() => setShowBookInput(false)}>Cancelar</Button>
                             <Button size="sm" onClick={addBook}>Adicionar</Button>
                         </div>
                     </motion.div>
@@ -367,47 +422,50 @@ export default function SetupPage() {
         </div>
     );
 
-    if (isGenerating) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-screen p-6 text-center space-y-8 bg-background">
-                <div className="relative h-32 w-32">
-                    <div className="absolute inset-0 bg-neural-500/20 blur-3xl rounded-full animate-pulse-slow" />
-                    <motion.div
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-                        className="w-full h-full border-4 border-neural-500/30 rounded-full border-t-neural-500"
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        <BrainCircuit className="w-10 h-10 text-neural-400 animate-pulse" />
-                    </div>
-                </div>
-                <div className="space-y-2">
-                    <h2 className="text-2xl font-bold text-white">Criando sua Trilha Neural</h2>
-                    <p className="text-neural-400 max-w-xs mx-auto">
-                        A IA está analisando seus objetivos e materiais para estruturar o plano perfeito.
-                    </p>
-                </div>
+    const renderStep5 = () => (
+        <div className="flex flex-col items-center justify-center text-center space-y-8 py-12">
+            <div className="relative">
+                <div className="absolute inset-0 bg-neural-500/20 blur-3xl rounded-full animate-pulse-slow" />
+                <BrainCircuit className="w-24 h-24 text-white relative z-10 animate-float" />
             </div>
-        );
-    }
+            <div className="space-y-3 max-w-md">
+                <h2 className="text-2xl font-bold text-white">
+                    {isGenerating ? "Sintetizando Plano Neural..." : "Tudo pronto!"}
+                </h2>
+                <p className="text-neural-400">
+                    {isGenerating
+                        ? "Nossa IA está analisando seus objetivos e materiais para criar o cronograma perfeito."
+                        : "Clique abaixo para gerar seu plano de estudos personalizado."}
+                </p>
+            </div>
+            {!isGenerating && (
+                <Button size="lg" onClick={handleGenerate} className="w-full max-w-xs shadow-xl shadow-neural-500/20">
+                    <Sparkles className="w-5 h-5 mr-2" /> Gerar Plano
+                </Button>
+            )}
+        </div>
+    );
 
     return (
-        <div className="min-h-screen bg-background flex flex-col">
+        <div className="min-h-screen bg-void-950 text-white p-6 pb-24">
             {/* Header */}
-            <div className="p-6 border-b border-neural-800 flex items-center justify-between bg-background/80 backdrop-blur-xl sticky top-0 z-50">
-                <Button variant="ghost" size="sm" onClick={step === 1 ? () => router.push('/') : handleBack}>
+            <header className="flex items-center justify-between mb-8">
+                <Button variant="ghost" size="sm" onClick={handleBack} disabled={step === 1} className={step === 1 ? 'opacity-0' : ''}>
                     <ArrowLeft className="w-4 h-4 mr-2" /> Voltar
                 </Button>
-                <div className="flex gap-1">
-                    {[1, 2, 3, 4].map(i => (
-                        <div key={i} className={`h-1.5 w-8 rounded-full transition-colors ${i <= step ? 'bg-neural-500' : 'bg-neural-800'}`} />
-                    ))}
+                <div className="flex flex-col items-center">
+                    <span className="text-xs font-medium text-neural-500 uppercase tracking-widest">Passo {step} de 5</span>
+                    <div className="flex gap-1 mt-2">
+                        {[1, 2, 3, 4, 5].map(s => (
+                            <div key={s} className={`h-1 w-8 rounded-full transition-all ${s <= step ? 'bg-neural-500' : 'bg-neural-800'}`} />
+                        ))}
+                    </div>
                 </div>
                 <div className="w-20" /> {/* Spacer */}
-            </div>
+            </header>
 
             {/* Content */}
-            <div className="flex-1 p-6 max-w-2xl mx-auto w-full pb-32">
+            <main className="max-w-2xl mx-auto">
                 <AnimatePresence mode="wait">
                     <motion.div
                         key={step}
@@ -420,27 +478,37 @@ export default function SetupPage() {
                         {step === 2 && renderStep2()}
                         {step === 3 && renderStep3()}
                         {step === 4 && renderStep4()}
+                        {step === 5 && renderStep5()}
                     </motion.div>
                 </AnimatePresence>
-            </div>
+            </main>
 
-            {/* Footer */}
-            <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-background via-background to-transparent z-40">
-                <div className="max-w-2xl mx-auto">
-                    <Button
-                        size="lg"
-                        className="w-full shadow-xl shadow-neural-500/20"
-                        onClick={step === 4 ? handleGenerate : handleNext}
-                        disabled={step === 1 && !objectiveText && !objectiveType}
-                    >
-                        {step === 4 ? (
-                            <>Gerar Plano de Estudo <Sparkles className="ml-2 w-4 h-4" /></>
-                        ) : (
-                            <>Continuar <ArrowRight className="ml-2 w-4 h-4" /></>
-                        )}
-                    </Button>
-                </div>
-            </div>
+            {/* Footer Actions */}
+            {step < 5 && (
+                <footer className="fixed bottom-0 left-0 right-0 p-6 bg-void-950/80 backdrop-blur-lg border-t border-neural-800 z-50">
+                    <div className="max-w-2xl mx-auto flex justify-end">
+                        <Button
+                            size="lg"
+                            onClick={handleNext}
+                            disabled={
+                                (step === 1 && !objective && !objectiveType) ||
+                                (step === 2 && !subjectsText && selectedChips.length === 0)
+                            }
+                            className="shadow-lg shadow-neural-500/20"
+                        >
+                            Continuar <ArrowRight className="ml-2 w-4 h-4" />
+                        </Button>
+                    </div>
+                </footer>
+            )}
         </div>
+    );
+}
+
+export default function SetupPage() {
+    return (
+        <Suspense fallback={<div className="flex items-center justify-center h-screen text-neural-400">Carregando...</div>}>
+            <SetupContent />
+        </Suspense>
     );
 }
