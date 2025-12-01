@@ -4,12 +4,13 @@ import { NextResponse } from "next/server";
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 export async function POST(req: Request) {
-    try {
-        const { goal, subjects, materials } = await req.json();
+  try {
+    const { goal, subjects, materials } = await req.json();
 
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    console.log("Generating plan with goal:", goal);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
 
-        let prompt = `
+    let prompt = `
       Atue como um especialista em educação e criação de currículos.
       Seu objetivo é criar um plano de estudos detalhado e personalizado.
 
@@ -17,22 +18,22 @@ export async function POST(req: Request) {
       **Matérias/Tópicos:** ${subjects.join(", ")}
     `;
 
-        if (materials && materials.length > 0) {
-            prompt += `
+    if (materials && materials.length > 0) {
+      prompt += `
       **Materiais de Apoio Fornecidos:**
       O aluno forneceu os seguintes materiais. Priorize o conteúdo destes materiais ao criar as lições, mas sinta-se livre para complementar com conhecimento externo se necessário para atingir o objetivo.
       ${materials.map((m: any) => `- ${m.title} (${m.type}): ${m.content ? m.content.slice(0, 500) + "..." : "Link/Arquivo"}`).join("\n")}
       `;
-        } else {
-            prompt += `
+    } else {
+      prompt += `
       **Sem Materiais de Apoio:**
       O aluno NÃO forneceu materiais específicos.
       Você DEVE atuar como um professor expert e curar o melhor conteúdo possível para este objetivo.
       Crie um currículo estruturado cobrindo os fundamentos até tópicos avançados necessários para o objetivo.
       `;
-        }
+    }
 
-        prompt += `
+    prompt += `
       **Formato de Saída (JSON Obrigatório):**
       Retorne APENAS um objeto JSON com a seguinte estrutura, sem markdown ou explicações adicionais:
       {
@@ -58,21 +59,21 @@ export async function POST(req: Request) {
       }
     `;
 
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const text = response.text();
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
 
-        // Clean up markdown code blocks if present
-        const cleanJson = text.replace(/```json/g, "").replace(/```/g, "").trim();
+    // Clean up markdown code blocks if present
+    const cleanJson = text.replace(/```json/g, "").replace(/```/g, "").trim();
 
-        const planData = JSON.parse(cleanJson);
+    const planData = JSON.parse(cleanJson);
 
-        return NextResponse.json(planData);
-    } catch (error) {
-        console.error("Error generating plan:", error);
-        return NextResponse.json(
-            { error: "Failed to generate plan" },
-            { status: 500 }
-        );
-    }
+    return NextResponse.json(planData);
+  } catch (error: any) {
+    console.error("Error generating plan:", error);
+    return NextResponse.json(
+      { error: error.message || "Failed to generate plan" },
+      { status: 500 }
+    );
+  }
 }
