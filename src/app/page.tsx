@@ -46,7 +46,7 @@ export default function Home() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {generatedPlan.schedule.map((day: any, idx: number) => (
+          {generatedPlan.schedule?.map((day: any, idx: number) => (
             <Card key={idx} className="p-4 space-y-3 bg-void-800/50 border-neural-800">
               <div className="flex items-center justify-between">
                 <h3 className="font-medium text-white">Dia {day.day}</h3>
