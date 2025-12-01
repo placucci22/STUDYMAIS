@@ -492,30 +492,6 @@ function SetupContent() {
         </div>
     );
 
-    const renderStep5 = () => (
-        <div className="flex flex-col items-center justify-center text-center space-y-8 py-12">
-            <div className="relative">
-                <div className="absolute inset-0 bg-neural-500/20 blur-3xl rounded-full animate-pulse-slow" />
-                <BrainCircuit className="w-24 h-24 text-white relative z-10 animate-float" />
-            </div>
-            <div className="space-y-3 max-w-md">
-                <h2 className="text-2xl font-bold text-white">
-                    {isGenerating ? "Sintetizando Plano Neural..." : "Tudo pronto!"}
-                </h2>
-                <p className="text-neural-400">
-                    {isGenerating
-                        ? "Nossa IA está analisando seus objetivos e materiais para criar o cronograma perfeito."
-                        : "Clique abaixo para gerar seu plano de estudos personalizado."}
-                </p>
-            </div>
-            {!isGenerating && (
-                <Button size="lg" onClick={handleGenerate} className="w-full max-w-xs shadow-xl shadow-neural-500/20">
-                    <Sparkles className="w-5 h-5 mr-2" /> Gerar Plano
-                </Button>
-            )}
-        </div>
-    );
-
     return (
         <div className="min-h-screen bg-void-950 text-white p-6 pb-24">
             {/* Header */}
@@ -524,9 +500,9 @@ function SetupContent() {
                     <ArrowLeft className="w-4 h-4 mr-2" /> Voltar
                 </Button>
                 <div className="flex flex-col items-center">
-                    <span className="text-xs font-medium text-neural-500 uppercase tracking-widest">Passo {step} de 5</span>
+                    <span className="text-xs font-medium text-neural-500 uppercase tracking-widest">Passo {step} de 6</span>
                     <div className="flex gap-1 mt-2">
-                        {[1, 2, 3, 4, 5].map(s => (
+                        {[1, 2, 3, 4, 5, 6].map(s => (
                             <div key={s} className={`h-1 w-8 rounded-full transition-all ${s <= step ? 'bg-neural-500' : 'bg-neural-800'}`} />
                         ))}
                     </div>
@@ -544,30 +520,36 @@ function SetupContent() {
                         exit={{ opacity: 0, x: -20 }}
                         transition={{ duration: 0.3 }}
                     >
-                        {step === 1 && renderStep1()}
-                        {step === 2 && renderStep2()}
-                        {step === 3 && renderStep3()}
-                        {step === 4 && renderStep4()}
-                        {step === 5 && renderStep5()}
+                        {renderCurrentStep()}
                     </motion.div>
                 </AnimatePresence>
             </main>
 
             {/* Footer Actions */}
-            {step < 5 && (
+            {step < 6 && (
                 <footer className="fixed bottom-0 left-0 right-0 p-6 bg-void-950/80 backdrop-blur-lg border-t border-neural-800 z-50">
                     <div className="max-w-2xl mx-auto flex justify-end">
-                        <Button
-                            size="lg"
-                            onClick={handleNext}
-                            disabled={
-                                (step === 1 && !objective && !objectiveType) ||
-                                (step === 2 && !subjectsText && selectedChips.length === 0)
-                            }
-                            className="shadow-lg shadow-neural-500/20"
-                        >
-                            Continuar <ArrowRight className="ml-2 w-4 h-4" />
-                        </Button>
+                        {step === 5 ? (
+                            <Button
+                                size="lg"
+                                onClick={handleNext}
+                                className="shadow-lg shadow-neural-500/20"
+                            >
+                                Continuar <ArrowRight className="ml-2 w-4 h-4" />
+                            </Button>
+                        ) : (
+                            <Button
+                                size="lg"
+                                onClick={handleNext}
+                                disabled={
+                                    (step === 1 && !objective && !objectiveType) ||
+                                    (step === 2 && !subjectsText && selectedChips.length === 0)
+                                }
+                                className="shadow-lg shadow-neural-500/20"
+                            >
+                                Continuar <ArrowRight className="ml-2 w-4 h-4" />
+                            </Button>
+                        )}
                     </div>
                 </footer>
             )}
