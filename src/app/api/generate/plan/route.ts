@@ -8,7 +8,8 @@ export async function POST(req: Request) {
     const { goal, subjects, materials } = await req.json();
 
     console.log("Generating plan with goal:", goal);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+    // Using the latest model available as per user context (Dec 2025)
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     let prompt = `
       Atue como um especialista em educação e criação de currículos.
