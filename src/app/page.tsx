@@ -38,27 +38,42 @@ export default function Home() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold text-white">Seu Plano de Estudo</h2>
-            <p className="text-neural-400 text-sm">Meta: {generatedPlan.goal}</p>
+            <p className="text-neural-400 text-sm">Meta: {generatedPlan.goal.split('\n')[0].slice(0, 50)}...</p>
           </div>
           <Button variant="ghost" size="sm" onClick={() => router.push('/setup')}>
             Novo Plano
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Horizontal Scroll Container */}
+        <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-thin scrollbar-thumb-neural-700 scrollbar-track-transparent">
           {generatedPlan.schedule?.map((day: any, idx: number) => (
-            <Card key={idx} className="p-4 space-y-3 bg-void-800/50 border-neural-800">
+            <Card key={idx} className="min-w-[280px] w-[280px] p-5 space-y-4 bg-void-800/50 border-neural-800 snap-center hover:border-neural-600 transition-colors">
               <div className="flex items-center justify-between">
-                <h3 className="font-medium text-white">Dia {day.day}</h3>
-                <span className="text-xs text-neural-500">{day.focus}</span>
+                <div className="bg-neural-500/10 text-neural-400 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
+                  Dia {day.day}
+                </div>
+                {idx === 0 && <span className="text-xs text-green-400 font-medium">Hoje</span>}
               </div>
-              <div className="space-y-2">
-                {day.tasks.map((task: string, tIdx: number) => (
-                  <div key={tIdx} className="flex items-start gap-2 text-sm text-neural-300">
+
+              <div>
+                <h3 className="font-bold text-white text-lg leading-tight line-clamp-2" title={day.focus}>
+                  {day.focus}
+                </h3>
+              </div>
+
+              <div className="space-y-3">
+                {day.tasks.slice(0, 3).map((task: string, tIdx: number) => (
+                  <div key={tIdx} className="flex items-start gap-3 text-sm text-neural-300">
                     <div className="w-1.5 h-1.5 rounded-full bg-neural-500 mt-1.5 shrink-0" />
-                    <span>{task}</span>
+                    <span className="line-clamp-2 leading-relaxed">{task}</span>
                   </div>
                 ))}
+                {day.tasks.length > 3 && (
+                  <p className="text-xs text-neural-500 pl-4 italic">
+                    + {day.tasks.length - 3} outras tarefas
+                  </p>
+                )}
               </div>
             </Card>
           ))}

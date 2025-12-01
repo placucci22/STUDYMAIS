@@ -45,6 +45,7 @@ export interface Lesson {
 export interface StudyPlanDraft {
     goal: string;
     subjects: string[];
+    deadline?: string; // '1_week', '1_month', '3_months', or specific date
 }
 
 export interface StudyPlan {

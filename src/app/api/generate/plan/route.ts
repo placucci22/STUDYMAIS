@@ -5,7 +5,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 export async function POST(req: Request) {
   try {
-    const { goal, subjects, materials } = await req.json();
+    const { goal, subjects, materials, deadline } = await req.json();
 
     console.log("Generating plan with goal:", goal);
     // Using the latest model available as per user context (Dec 2025)
@@ -17,6 +17,7 @@ export async function POST(req: Request) {
 
       **Objetivo do Aluno:** ${goal}
       **Matérias/Tópicos:** ${subjects.join(", ")}
+      **Tempo Disponível:** ${deadline ? deadline.replace('_', ' ') : 'Não especificado (crie um plano equilibrado)'}
     `;
 
     if (materials && materials.length > 0) {
@@ -35,27 +36,33 @@ export async function POST(req: Request) {
     }
 
     prompt += `
+      **Regras de Formatação (IMPORTANTE):**
+      1. **Distribuição:** Distribua o conteúdo de forma lógica dentro do tempo disponível (${deadline || 'padrão'}).
+      2. **Títulos Curtos:** Os títulos das lições e focos do dia devem ser BREVES e DIRETOS (máx 5-7 palavras).
+      3. **Resumos Concisos:** As descrições devem ser curtas e objetivas.
+      4. **Estrutura:** Crie um plano dia-a-dia.
+
       **Formato de Saída (JSON Obrigatório):**
       Retorne APENAS um objeto JSON com a seguinte estrutura, sem markdown ou explicações adicionais:
       {
         "schedule": [
           {
             "day": 1,
-            "focus": "Título do Foco do Dia",
-            "tasks": ["Tarefa 1", "Tarefa 2", "Tarefa 3"]
+            "focus": "Título Breve do Foco",
+            "tasks": ["Tarefa 1", "Tarefa 2"]
           },
-          ... (crie um plano para 7 dias ou o necessário para o objetivo)
+          ...
         ],
         "lessons": [
           {
             "id": "generated-1",
-            "subject": "Nome da Matéria",
-            "title": "Título da Lição",
-            "description": "Descrição detalhada do que será aprendido.",
+            "subject": "Matéria",
+            "title": "Título Curto da Lição",
+            "description": "Resumo breve do que será aprendido.",
             "order": 1,
             "status": "unlocked"
           },
-          ... (crie lições progressivas cobrindo todo o conteúdo)
+          ...
         ]
       }
     `;

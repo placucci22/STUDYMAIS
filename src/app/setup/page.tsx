@@ -178,35 +178,91 @@ function SetupContent() {
         setShowBookInput(false);
     };
 
-    const handleGenerate = async () => {
-        // 1. Check Authentication
-        if (!user) {
-            // Save Draft
-            saveDraftPlan();
-            // Redirect to Login
-            // The AuthContext/Google Login flow should handle the redirect back to origin/callback
-            // But we need to ensure the callback redirects eventually to /setup?action=restore
+    // --- RENDER STEPS ---
 
-            // Since we are using Supabase Auth with a callback route, we can pass `next` param?
-            // Our current signInWithGoogle implementation hardcodes the redirect to /auth/callback.
-            // We should modify signInWithGoogle to accept a redirect URL or handle it in callback.
-            // For now, let's assume the user manually returns or we use a sophisticated auth flow.
-            // A simple way:
+    // New Step: Time Availability
+    const [deadline, setDeadline] = useState<string>('1_week');
+
+    const renderStep5 = () => (
+        <div className="space-y-6">
+            <div className="space-y-2">
+                <h2 className="text-2xl font-bold text-white">Quanto tempo você tem?</h2>
+                <p className="text-neural-400">Isso ajuda a IA a distribuir o conteúdo de forma equilibrada.</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[
+                    { id: '1_week', label: '1 Semana', desc: 'Intensivo rápido' },
+                    { id: '2_weeks', label: '2 Semanas', desc: 'Ritmo moderado' },
+                    { id: '1_month', label: '1 Mês', desc: 'Aprofundado' },
+                    { id: '3_months', label: '3 Meses', desc: 'Longo prazo' },
+                ].map(opt => (
+                    <button
+                        key={opt.id}
+                        onClick={() => setDeadline(opt.id)}
+                        className={`
+                            p-4 rounded-xl border text-left transition-all
+                            ${deadline === opt.id
+                                ? 'bg-neural-600 border-neural-500 text-white shadow-lg'
+                                : 'bg-void-800 border-neural-800 text-neural-400 hover:border-neural-600'}
+                        `}
+                    >
+                        <div className="font-bold">{opt.label}</div>
+                        <div className="text-xs opacity-70">{opt.desc}</div>
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
+
+    const renderStep6 = () => (
+        <div className="text-center space-y-8 py-12">
+            <div className="relative w-32 h-32 mx-auto">
+                <div className="absolute inset-0 bg-neural-500/20 rounded-full animate-ping" />
+                <div className="relative bg-neural-900 rounded-full p-6 border border-neural-700 shadow-2xl">
+                    <BrainCircuit className="w-20 h-20 text-neural-400 animate-pulse" />
+                </div>
+            </div>
+
+            <div className="space-y-4">
+                <h2 className="text-3xl font-bold text-white">Criando seu Plano Neural</h2>
+                <p className="text-neural-400 max-w-md mx-auto">
+                    Nossa IA está analisando seu perfil, objetivos e materiais para construir a estratégia perfeita.
+                </p>
+            </div>
+
+            <div className="max-w-xs mx-auto space-y-2">
+                <div className="h-1 w-full bg-void-800 rounded-full overflow-hidden">
+                    <motion.div
+                        className="h-full bg-neural-500"
+                        initial={{ width: "0%" }}
+                        animate={{ width: "100%" }}
+                        transition={{ duration: 3, repeat: Infinity }}
+                    />
+                </div>
+                <p className="text-xs text-neural-500 font-mono">PROCESSANDO DADOS...</p>
+            </div>
+        </div>
+    );
+
+    const handleGenerate = async () => {
+        if (!user) {
+            saveDraftPlan();
             const { error } = await signInWithGoogle('/setup?action=restore');
             if (error) {
                 console.error("Login error:", error);
-                alert("Erro ao iniciar login. Verifique o console para mais detalhes.");
+                alert("Erro ao iniciar login.");
             }
             return;
         }
 
         setIsGenerating(true);
         try {
-            // Prepare Draft Object
             const draft: StudyPlanDraft = {
                 goal: objectiveType === 'general' ? objective : `${objectiveType}: ${objective}`,
                 subjects: subjects,
-                materials: materials
+                materials: materials,
+                deadline: deadline // Include deadline
             };
 
             const detailsContext = Object.entries(subjectDetails)
@@ -217,16 +273,26 @@ function SetupContent() {
 
             const newPlan = await generateStudyPlan(draft);
             setGeneratedPlan(newPlan);
-
-            // Clear draft after successful generation
             clearDraftPlan();
-
             router.push('/');
         } catch (error) {
             console.error("Failed to generate plan", error);
             alert("Erro ao gerar plano. Tente novamente.");
         } finally {
             setIsGenerating(false);
+        }
+    };
+
+    // Update step rendering logic
+    const renderCurrentStep = () => {
+        switch (step) {
+            case 1: return renderStep1();
+            case 2: return renderStep2();
+            case 3: return renderStep3();
+            case 4: return renderStep4();
+            case 5: return renderStep5(); // Deadline Step
+            case 6: return renderStep6(); // Generation
+            default: return null;
         }
     };
 
