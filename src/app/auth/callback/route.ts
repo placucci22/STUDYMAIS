@@ -4,6 +4,9 @@ import { cookies } from 'next/headers';
 
 export async function GET(request: Request) {
     const { searchParams, origin } = new URL(request.url);
+    console.log('[Auth Callback] Request URL:', request.url);
+    console.log('[Auth Callback] Search Params:', Object.fromEntries(searchParams.entries()));
+
     const code = searchParams.get('code');
     const next = searchParams.get('next') ?? '/';
 
